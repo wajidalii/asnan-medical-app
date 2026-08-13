@@ -4,7 +4,6 @@ using Asnan.Domain.Entities;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Asnan.Api.Tests;
@@ -12,10 +11,10 @@ namespace Asnan.Api.Tests;
 /// <summary>
 /// Real-database concurrency proof for the refresh-token rotation race — see
 /// RefreshTokenServiceTests' comment for why this can't be reproduced
-/// faithfully against EF Core's InMemory provider. Same connection-string
-/// convention as DbConstraintTests.
+/// faithfully against EF Core's InMemory provider.
 /// </summary>
-public class DbConcurrencyTests : IAsyncLifetime
+[Collection("Database")]
+public class DbConcurrencyTests
 {
     private static readonly JwtOptions JwtOptions = new()
     {
@@ -27,24 +26,17 @@ public class DbConcurrencyTests : IAsyncLifetime
         RefreshTokenAbsoluteExpiryDays = 90,
     };
 
-    private string _connectionString = null!;
+    private readonly DatabaseFixture _fixture;
 
-    public async Task InitializeAsync()
+    public DbConcurrencyTests(DatabaseFixture fixture)
     {
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-        _connectionString = configuration.GetConnectionString("Default")
-            ?? "Server=localhost;Port=3307;Database=asnan_dev;User=asnan;Password=asnan_dev_only_password;";
-
-        await using var db = CreateDb();
-        await db.Database.MigrateAsync();
+        _fixture = fixture;
     }
-
-    public Task DisposeAsync() => Task.CompletedTask;
 
     private AsnanDbContext CreateDb()
     {
         var options = new DbContextOptionsBuilder<AsnanDbContext>()
-            .UseMySql(_connectionString, new MySqlServerVersion(new Version(8, 0, 36)))
+            .UseMySql(_fixture.ConnectionString, new MySqlServerVersion(new Version(8, 0, 36)))
             .Options;
         return new AsnanDbContext(options);
     }
@@ -62,10 +54,6 @@ public class DbConcurrencyTests : IAsyncLifetime
         {
             var user = new User { Email = $"{Guid.NewGuid()}@test.local", PasswordHash = "irrelevant" };
             seedDb.Users.Add(user);
-            if (!await seedDb.Roles.AnyAsync(r => r.Id == RoleIds.Patient))
-            {
-                seedDb.Roles.Add(new Role { Id = RoleIds.Patient, Name = "Patient" });
-            }
             seedDb.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = RoleIds.Patient });
 
             var session = new UserSession
