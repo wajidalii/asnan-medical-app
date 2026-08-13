@@ -5,6 +5,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_otp_screen.dart';
 import '../../features/auth/presentation/signup_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/booking/presentation/booking_screen.dart';
 import '../../features/doctors/presentation/doctor_detail_screen.dart';
 import '../../features/doctors/presentation/doctor_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -20,6 +21,7 @@ abstract final class AppRoutes {
   static const signupPassword = 'signup-password';
   static const home = 'home';
   static const doctorDetail = 'doctor-detail';
+  static const booking = 'booking';
 }
 
 /// Deep links use the `asnan://` custom scheme (registered in
@@ -64,6 +66,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'doctors/:id',
             name: AppRoutes.doctorDetail,
             builder: (context, state) => DoctorDetailScreen(doctorId: state.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'book',
+                name: AppRoutes.booking,
+                builder: (context, state) => BookingScreen(doctorId: state.pathParameters['id']!),
+              ),
+            ],
           ),
         ],
       ),
