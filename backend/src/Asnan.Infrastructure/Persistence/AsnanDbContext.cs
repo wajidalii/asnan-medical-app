@@ -27,6 +27,12 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<SignupToken> SignupTokens => Set<SignupToken>();
 
+    public DbSet<Specialty> Specialties => Set<Specialty>();
+
+    public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+
+    public DbSet<DoctorSpecialty> DoctorSpecialties => Set<DoctorSpecialty>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

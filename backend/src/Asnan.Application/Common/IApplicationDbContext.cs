@@ -24,6 +24,12 @@ public interface IApplicationDbContext
 
     DbSet<RefreshToken> RefreshTokens { get; }
 
+    DbSet<Specialty> Specialties { get; }
+
+    DbSet<DoctorProfile> DoctorProfiles { get; }
+
+    DbSet<DoctorSpecialty> DoctorSpecialties { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
