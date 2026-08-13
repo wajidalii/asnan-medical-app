@@ -5,7 +5,8 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_otp_screen.dart';
 import '../../features/auth/presentation/signup_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
-import '../../features/home/presentation/home_placeholder_screen.dart';
+import '../../features/doctors/presentation/doctor_detail_screen.dart';
+import '../../features/doctors/presentation/doctor_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
 /// Route names are used (not raw path strings) everywhere a route is
@@ -18,6 +19,7 @@ abstract final class AppRoutes {
   static const signupOtp = 'signup-otp';
   static const signupPassword = 'signup-password';
   static const home = 'home';
+  static const doctorDetail = 'doctor-detail';
 }
 
 /// Deep links use the `asnan://` custom scheme (registered in
@@ -56,7 +58,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         name: AppRoutes.home,
-        builder: (context, state) => const HomePlaceholderScreen(),
+        builder: (context, state) => const DoctorListScreen(),
+        routes: [
+          GoRoute(
+            path: 'doctors/:id',
+            name: AppRoutes.doctorDetail,
+            builder: (context, state) => DoctorDetailScreen(doctorId: state.pathParameters['id']!),
+          ),
+        ],
       ),
     ],
   );
