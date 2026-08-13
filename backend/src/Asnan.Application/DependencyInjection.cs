@@ -30,6 +30,7 @@ public static class DependencyInjection
 
         services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
         services.AddScoped<IAvailabilityExceptionService, AvailabilityExceptionService>();
+        services.AddScoped<IAvailabilityComputationService, AvailabilityComputationService>();
 
         return services;
     }
