@@ -1,5 +1,6 @@
 using System.Reflection;
 using Asnan.Application.Auth;
+using Asnan.Application.Availability;
 using Asnan.Application.Doctors;
 using Asnan.Application.Otps;
 using Asnan.Application.Specialties;
@@ -26,6 +27,9 @@ public static class DependencyInjection
         services.AddScoped<ISpecialtyService, SpecialtyService>();
         services.AddScoped<IDoctorService, DoctorService>();
         services.AddScoped<IDoctorSearchService, DoctorSearchService>();
+
+        services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
+        services.AddScoped<IAvailabilityExceptionService, AvailabilityExceptionService>();
 
         return services;
     }
