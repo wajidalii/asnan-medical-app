@@ -10,10 +10,10 @@ namespace Asnan.Application.Availability;
 /// converts each slot to UTC with the doctor's timezone applied at the exact
 /// slot instant (DST-correct across a transition date).
 ///
-/// Does NOT yet subtract booked appointments or active holds — those tables
-/// (AppointmentHolds, Appointments) don't exist until Milestones 5/6. This is
-/// flagged rather than faked; <see cref="AvailabilityComputationService"/>
-/// documents the same gap at the call site.
+/// Does NOT subtract active holds or booked appointments itself — that's
+/// <see cref="AvailabilityComputationService"/>'s job, layered on top of this
+/// pure result. Booked Appointments still can't be subtracted anywhere; that
+/// table doesn't exist until Milestone 6. Flagged rather than faked.
 /// </summary>
 public static class AvailabilitySlotCalculator
 {

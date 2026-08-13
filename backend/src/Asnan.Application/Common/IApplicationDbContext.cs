@@ -34,6 +34,8 @@ public interface IApplicationDbContext
 
     DbSet<DoctorAvailabilityException> DoctorAvailabilityExceptions { get; }
 
+    DbSet<AppointmentHold> AppointmentHolds { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
