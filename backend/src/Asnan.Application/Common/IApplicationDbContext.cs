@@ -19,5 +19,9 @@ public interface IApplicationDbContext
 
     DbSet<SignupToken> SignupTokens { get; }
 
+    DbSet<UserSession> UserSessions { get; }
+
+    DbSet<RefreshToken> RefreshTokens { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
