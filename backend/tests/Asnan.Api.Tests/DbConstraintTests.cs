@@ -1,7 +1,6 @@
 using Asnan.Domain.Entities;
 using Asnan.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Asnan.Api.Tests;
 
@@ -14,25 +13,25 @@ namespace Asnan.Api.Tests;
 /// Connection string comes from ConnectionStrings__Default (same convention
 /// the API uses); CI provides a MySQL service container, see backend-ci.yml.
 /// </summary>
+[Collection("Database")]
 public class DbConstraintTests : IAsyncLifetime
 {
+    private readonly DatabaseFixture _fixture;
     private AsnanDbContext _db = null!;
 
-    public async Task InitializeAsync()
+    public DbConstraintTests(DatabaseFixture fixture)
     {
-        var configuration = new ConfigurationBuilder()
-            .AddEnvironmentVariables()
-            .Build();
+        _fixture = fixture;
+    }
 
-        var connectionString = configuration.GetConnectionString("Default")
-            ?? "Server=localhost;Port=3307;Database=asnan_dev;User=asnan;Password=asnan_dev_only_password;";
-
+    public Task InitializeAsync()
+    {
         var options = new DbContextOptionsBuilder<AsnanDbContext>()
-            .UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)))
+            .UseMySql(_fixture.ConnectionString, new MySqlServerVersion(new Version(8, 0, 36)))
             .Options;
 
         _db = new AsnanDbContext(options);
-        await _db.Database.MigrateAsync();
+        return Task.CompletedTask;
     }
 
     public async Task DisposeAsync() => await _db.DisposeAsync();

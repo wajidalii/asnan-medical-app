@@ -1,5 +1,6 @@
 using Asnan.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Asnan.Application.Common;
 
@@ -24,4 +25,8 @@ public interface IApplicationDbContext
     DbSet<RefreshToken> RefreshTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Needed to recover a tracked entity's state after a
+    /// DbUpdateConcurrencyException — see RefreshTokenService.</summary>
+    EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }
