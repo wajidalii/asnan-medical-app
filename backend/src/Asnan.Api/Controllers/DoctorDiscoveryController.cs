@@ -26,4 +26,11 @@ public class DoctorDiscoveryController : ControllerBase
     {
         return Ok(await _searchService.SearchAsync(query, cancellationToken));
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var doctor = await _searchService.GetByIdAsync(id, cancellationToken);
+        return doctor is null ? NotFound() : Ok(doctor);
+    }
 }

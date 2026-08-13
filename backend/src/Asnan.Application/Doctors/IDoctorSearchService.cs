@@ -5,4 +5,6 @@ namespace Asnan.Application.Doctors;
 public interface IDoctorSearchService
 {
     Task<PagedResult<DoctorListItemDto>> SearchAsync(DoctorSearchQuery query, CancellationToken cancellationToken = default);
+
+    Task<DoctorDetailDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

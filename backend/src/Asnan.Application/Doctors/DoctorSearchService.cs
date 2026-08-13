@@ -56,6 +56,28 @@ public class DoctorSearchService : IDoctorSearchService
         return new PagedResult<DoctorListItemDto>(doctors.Select(ToDto).ToList(), query.Page, query.PageSize, totalCount);
     }
 
+    public async Task<DoctorDetailDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var doctor = await _db.DoctorProfiles
+            .Include(d => d.DoctorSpecialties).ThenInclude(ds => ds.Specialty)
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+
+        return doctor is null ? null : ToDetailDto(doctor);
+    }
+
+    private static DoctorDetailDto ToDetailDto(DoctorProfile d) => new(
+        d.Id,
+        d.FullName,
+        d.Bio,
+        d.Qualifications,
+        d.DoctorSpecialties.Select(ds => new SpecialtyDto(ds.Specialty.Id, ds.Specialty.Name, ds.Specialty.Description)).ToList(),
+        d.YearsOfExperience,
+        d.ConsultationFee,
+        d.Currency,
+        d.ClinicAddress,
+        d.AppointmentDurationMinutes,
+        d.IsAcceptingNewPatients);
+
     private static DoctorListItemDto ToDto(DoctorProfile d) => new(
         d.Id,
         d.FullName,

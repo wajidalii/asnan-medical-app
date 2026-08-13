@@ -65,11 +65,13 @@ public class DoctorService : IDoctorService
             UserId = dto.UserId,
             FullName = dto.FullName,
             Bio = dto.Bio,
+            Qualifications = dto.Qualifications,
             ConsultationFee = dto.ConsultationFee,
             Currency = dto.Currency,
             TimeZoneId = dto.TimeZoneId,
             YearsOfExperience = dto.YearsOfExperience,
             ClinicAddress = dto.ClinicAddress,
+            AppointmentDurationMinutes = dto.AppointmentDurationMinutes,
             IsAcceptingNewPatients = dto.IsAcceptingNewPatients,
         };
         doctor.DoctorSpecialties = specialties.Select(s => new DoctorSpecialty { DoctorProfile = doctor, SpecialtyId = s.Id, Specialty = s }).ToList();
@@ -98,11 +100,13 @@ public class DoctorService : IDoctorService
 
         doctor.FullName = dto.FullName;
         doctor.Bio = dto.Bio;
+        doctor.Qualifications = dto.Qualifications;
         doctor.ConsultationFee = dto.ConsultationFee;
         doctor.Currency = dto.Currency;
         doctor.TimeZoneId = dto.TimeZoneId;
         doctor.YearsOfExperience = dto.YearsOfExperience;
         doctor.ClinicAddress = dto.ClinicAddress;
+        doctor.AppointmentDurationMinutes = dto.AppointmentDurationMinutes;
         doctor.IsAcceptingNewPatients = dto.IsAcceptingNewPatients;
         doctor.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -142,5 +146,7 @@ public class DoctorService : IDoctorService
         d.YearsOfExperience,
         d.ClinicAddress,
         d.IsAcceptingNewPatients,
-        d.DoctorSpecialties.Select(ds => new SpecialtyDto(ds.Specialty.Id, ds.Specialty.Name, ds.Specialty.Description)).ToList());
+        d.DoctorSpecialties.Select(ds => new SpecialtyDto(ds.Specialty.Id, ds.Specialty.Name, ds.Specialty.Description)).ToList(),
+        d.Qualifications,
+        d.AppointmentDurationMinutes);
 }
