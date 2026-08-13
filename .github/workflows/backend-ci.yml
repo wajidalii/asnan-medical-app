@@ -18,6 +18,25 @@ jobs:
       run:
         working-directory: backend
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_only
+          MYSQL_DATABASE: asnan_dev
+          MYSQL_USER: asnan
+          MYSQL_PASSWORD: asnan_ci_only_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ConnectionStrings__Default: "Server=127.0.0.1;Port=3306;Database=asnan_dev;User=asnan;Password=asnan_ci_only_password;"
+
     steps:
       - uses: actions/checkout@v4
 
