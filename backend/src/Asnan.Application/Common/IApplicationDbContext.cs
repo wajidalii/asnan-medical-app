@@ -30,6 +30,10 @@ public interface IApplicationDbContext
 
     DbSet<DoctorSpecialty> DoctorSpecialties { get; }
 
+    DbSet<DoctorSchedule> DoctorSchedules { get; }
+
+    DbSet<DoctorAvailabilityException> DoctorAvailabilityExceptions { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a

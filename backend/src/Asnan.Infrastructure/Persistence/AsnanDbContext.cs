@@ -33,6 +33,10 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<DoctorSpecialty> DoctorSpecialties => Set<DoctorSpecialty>();
 
+    public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
+
+    public DbSet<DoctorAvailabilityException> DoctorAvailabilityExceptions => Set<DoctorAvailabilityException>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
