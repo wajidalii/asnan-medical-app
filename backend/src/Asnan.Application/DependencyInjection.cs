@@ -32,6 +32,9 @@ public static class DependencyInjection
         services.AddScoped<IAvailabilityExceptionService, AvailabilityExceptionService>();
         services.AddScoped<IAvailabilityComputationService, AvailabilityComputationService>();
 
+        services.Configure<HoldOptions>(configuration.GetSection(HoldOptions.SectionName));
+        services.AddScoped<IAppointmentHoldService, AppointmentHoldService>();
+
         return services;
     }
 }

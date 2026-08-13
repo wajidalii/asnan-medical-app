@@ -37,6 +37,8 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<DoctorAvailabilityException> DoctorAvailabilityExceptions => Set<DoctorAvailabilityException>();
 
+    public DbSet<AppointmentHold> AppointmentHolds => Set<AppointmentHold>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
