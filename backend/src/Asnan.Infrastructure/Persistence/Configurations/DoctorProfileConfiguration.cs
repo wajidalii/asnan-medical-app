@@ -14,6 +14,7 @@ public class DoctorProfileConfiguration : IEntityTypeConfiguration<DoctorProfile
 
         builder.Property(d => d.FullName).HasMaxLength(256).IsRequired();
         builder.Property(d => d.Bio).HasMaxLength(2000);
+        builder.Property(d => d.Qualifications).HasMaxLength(1024);
         builder.Property(d => d.ConsultationFee).HasColumnType("decimal(10,2)");
         builder.Property(d => d.Currency).HasMaxLength(3).IsRequired();
         builder.Property(d => d.TimeZoneId).HasMaxLength(64).IsRequired();

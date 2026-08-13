@@ -215,6 +215,65 @@ public class DoctorDiscoveryControllerTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
+    public async Task GetById_ReturnsFullDetailForExistingDoctor()
+    {
+        var marker = $"DetailTest{Guid.NewGuid():N}";
+        Guid doctorId;
+        await using (var db = CreateDb())
+        {
+            var specialty = await SeedSpecialtyAsync(db, $"{marker}-Specialty");
+            var doctor = await SeedDoctorAsync(db, $"Dr. {marker}", 175m, 12, specialty);
+            doctor.Bio = "About this doctor.";
+            doctor.Qualifications = "MBBS, FCPS (Cardiology)";
+            doctor.ClinicAddress = "789 Health St";
+            doctor.AppointmentDurationMinutes = 45;
+            await db.SaveChangesAsync();
+            doctorId = doctor.Id;
+        }
+
+        var response = await CreateClient().GetAsync($"/api/v1/doctors/{doctorId}");
+        response.EnsureSuccessStatusCode();
+        var detail = await response.Content.ReadFromJsonAsync<DoctorDetailDto>();
+
+        Assert.NotNull(detail);
+        Assert.Equal(doctorId, detail!.Id);
+        Assert.Equal("About this doctor.", detail.Bio);
+        Assert.Equal("MBBS, FCPS (Cardiology)", detail.Qualifications);
+        Assert.Equal("789 Health St", detail.ClinicAddress);
+        Assert.Equal(45, detail.AppointmentDurationMinutes);
+        Assert.Equal(175m, detail.ConsultationFee);
+        Assert.Equal(12, detail.YearsOfExperience);
+        Assert.Contains(detail.Specialties, s => s.Name == $"{marker}-Specialty");
+    }
+
+    [Fact]
+    public async Task GetById_WithUnknownId_ReturnsNotFound()
+    {
+        var response = await CreateClient().GetAsync($"/api/v1/doctors/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_ForSoftDeletedDoctor_ReturnsNotFound()
+    {
+        var marker = $"SoftDeleteTest{Guid.NewGuid():N}";
+        Guid doctorId;
+        await using (var db = CreateDb())
+        {
+            var doctor = await SeedDoctorAsync(db, $"Dr. {marker}", 100m, 3);
+            doctorId = doctor.Id;
+
+            doctor.DeletedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        var response = await CreateClient().GetAsync($"/api/v1/doctors/{doctorId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Search_ExcludesInternalOnlyFields()
     {
         var marker = $"FieldTest{Guid.NewGuid():N}";

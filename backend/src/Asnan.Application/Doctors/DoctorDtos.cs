@@ -14,7 +14,9 @@ public record DoctorProfileDto(
     int? YearsOfExperience,
     string? ClinicAddress,
     bool IsAcceptingNewPatients,
-    List<SpecialtyDto> Specialties);
+    List<SpecialtyDto> Specialties,
+    string? Qualifications = null,
+    int AppointmentDurationMinutes = 30);
 
 public record CreateDoctorDto(
     Guid UserId,
@@ -26,7 +28,9 @@ public record CreateDoctorDto(
     int? YearsOfExperience,
     string? ClinicAddress,
     bool IsAcceptingNewPatients,
-    List<Guid> SpecialtyIds);
+    List<Guid> SpecialtyIds,
+    string? Qualifications = null,
+    int AppointmentDurationMinutes = 30);
 
 public record UpdateDoctorDto(
     string FullName,
@@ -37,7 +41,9 @@ public record UpdateDoctorDto(
     int? YearsOfExperience,
     string? ClinicAddress,
     bool IsAcceptingNewPatients,
-    List<Guid> SpecialtyIds);
+    List<Guid> SpecialtyIds,
+    string? Qualifications = null,
+    int AppointmentDurationMinutes = 30);
 
 public class CreateDoctorDtoValidator : AbstractValidator<CreateDoctorDto>
 {
@@ -52,6 +58,8 @@ public class CreateDoctorDtoValidator : AbstractValidator<CreateDoctorDto>
         RuleFor(x => x.YearsOfExperience).GreaterThanOrEqualTo(0).When(x => x.YearsOfExperience.HasValue);
         RuleFor(x => x.ClinicAddress).MaximumLength(512);
         RuleFor(x => x.SpecialtyIds).NotEmpty().WithMessage("At least one specialty is required.");
+        RuleFor(x => x.Qualifications).MaximumLength(1024);
+        RuleFor(x => x.AppointmentDurationMinutes).InclusiveBetween(5, 240);
     }
 }
 
@@ -67,5 +75,7 @@ public class UpdateDoctorDtoValidator : AbstractValidator<UpdateDoctorDto>
         RuleFor(x => x.YearsOfExperience).GreaterThanOrEqualTo(0).When(x => x.YearsOfExperience.HasValue);
         RuleFor(x => x.ClinicAddress).MaximumLength(512);
         RuleFor(x => x.SpecialtyIds).NotEmpty().WithMessage("At least one specialty is required.");
+        RuleFor(x => x.Qualifications).MaximumLength(1024);
+        RuleFor(x => x.AppointmentDurationMinutes).InclusiveBetween(5, 240);
     }
 }
