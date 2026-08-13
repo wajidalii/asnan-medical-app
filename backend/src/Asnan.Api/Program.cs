@@ -3,6 +3,7 @@ using Asnan.Api.Middleware;
 using Asnan.Application;
 using Asnan.Infrastructure;
 using Asp.Versioning;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -23,10 +24,11 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
-    builder.Services.AddApplication();
-    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddApplication(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 
     builder.Services.AddControllers();
+    builder.Services.AddFluentValidationAutoValidation();
 
     builder.Services
         .AddApiVersioning(options =>

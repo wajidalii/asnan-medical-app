@@ -1,9 +1,10 @@
+using Asnan.Application.Common;
 using Asnan.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Asnan.Infrastructure.Persistence;
 
-public class AsnanDbContext : DbContext
+public class AsnanDbContext : DbContext, IApplicationDbContext
 {
     public AsnanDbContext(DbContextOptions<AsnanDbContext> options)
         : base(options)
