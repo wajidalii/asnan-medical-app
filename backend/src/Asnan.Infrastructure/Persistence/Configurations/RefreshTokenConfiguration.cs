@@ -24,5 +24,13 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(t => t.UserSessionId);
+
+        // Makes the "mark this token used" update in RefreshTokenService atomic:
+        // if two concurrent refresh calls both read UsedAtUtc == null for the same
+        // token, only the first SaveChangesAsync succeeds — the second throws
+        // DbUpdateConcurrencyException (its WHERE clause's original-value check on
+        // UsedAtUtc no longer matches), which the service treats as reuse-detected
+        // rather than letting both requests silently rotate the same token.
+        builder.Property(t => t.UsedAtUtc).IsConcurrencyToken();
     }
 }
