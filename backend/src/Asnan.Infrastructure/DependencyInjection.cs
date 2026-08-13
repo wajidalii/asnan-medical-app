@@ -1,5 +1,7 @@
+using Asnan.Application.Auth;
 using Asnan.Application.Common;
 using Asnan.Application.Otps;
+using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Otps;
 using Asnan.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AsnanDbContext>());
 
         AddOtpProviders(services, configuration, isDevelopment);
+
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
         return services;
     }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Asnan.Application.Auth;
 using Asnan.Application.Otps;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,8 @@ public static class DependencyInjection
 
         services.Configure<OtpOptions>(configuration.GetSection(OtpOptions.SectionName));
         services.AddScoped<IOtpService, OtpService>();
+
+        services.AddScoped<ISignupService, SignupService>();
 
         return services;
     }

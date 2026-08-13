@@ -25,6 +25,8 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    public DbSet<SignupToken> SignupTokens => Set<SignupToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
