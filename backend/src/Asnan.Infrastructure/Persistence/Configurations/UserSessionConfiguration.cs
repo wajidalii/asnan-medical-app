@@ -21,5 +21,8 @@ public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(s => s.UserId);
+
+        // See UserRoleConfiguration for why this must mirror Users' soft-delete filter.
+        builder.HasQueryFilter(s => s.User.DeletedAtUtc == null);
     }
 }

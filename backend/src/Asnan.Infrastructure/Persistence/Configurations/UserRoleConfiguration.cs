@@ -21,5 +21,10 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
             .WithMany(r => r.UserRoles)
             .HasForeignKey(ur => ur.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Must match Users' soft-delete filter (User.DeletedAtUtc == null) — otherwise
+        // EF Core warns that a required-relationship parent can be filtered out from
+        // under an unfiltered child, which would throw on load rather than just omit it.
+        builder.HasQueryFilter(ur => ur.User.DeletedAtUtc == null);
     }
 }
