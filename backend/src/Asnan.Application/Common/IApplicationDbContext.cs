@@ -13,5 +13,11 @@ public interface IApplicationDbContext
 {
     DbSet<Otp> Otps { get; }
 
+    DbSet<User> Users { get; }
+
+    DbSet<UserRole> UserRoles { get; }
+
+    DbSet<SignupToken> SignupTokens { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
