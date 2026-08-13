@@ -31,6 +31,7 @@ public static class DependencyInjection
         AddOtpProviders(services, configuration, isDevelopment);
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
     }

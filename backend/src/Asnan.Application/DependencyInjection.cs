@@ -16,7 +16,9 @@ public static class DependencyInjection
         services.Configure<OtpOptions>(configuration.GetSection(OtpOptions.SectionName));
         services.AddScoped<IOtpService, OtpService>();
 
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddScoped<ISignupService, SignupService>();
+        services.AddScoped<ILoginService, LoginService>();
 
         return services;
     }
