@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../domain/doctor_detail.dart';
 import '../domain/doctors_failure.dart';
 import 'doctor_detail_controller.dart';
@@ -106,6 +108,13 @@ class _DoctorDetailBody extends StatelessWidget {
         ),
         if (doctor.clinicAddress != null && doctor.clinicAddress!.isNotEmpty)
           _DetailRow(icon: Icons.location_on, label: 'Clinic', value: doctor.clinicAddress!),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: doctor.isAcceptingNewPatients
+              ? () => context.pushNamed(AppRoutes.booking, pathParameters: {'id': doctor.id})
+              : null,
+          child: Text(doctor.isAcceptingNewPatients ? 'Book Appointment' : 'Not accepting new patients'),
+        ),
       ],
     );
   }
