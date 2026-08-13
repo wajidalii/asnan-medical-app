@@ -1,6 +1,8 @@
 using System.Reflection;
 using Asnan.Application.Auth;
+using Asnan.Application.Doctors;
 using Asnan.Application.Otps;
+using Asnan.Application.Specialties;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<ISignupService, SignupService>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
+        services.AddScoped<ISpecialtyService, SpecialtyService>();
+        services.AddScoped<IDoctorService, DoctorService>();
 
         return services;
     }
