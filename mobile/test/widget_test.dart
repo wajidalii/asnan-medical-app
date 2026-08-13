@@ -2,16 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:asnan/core/storage/secure_storage_service.dart';
 import 'package:asnan/main.dart';
 
+import 'fakes/fake_secure_storage_service.dart';
+
 void main() {
-  testWidgets('splash screen navigates to the auth screen', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: AsnanApp()));
+  testWidgets('splash screen navigates to login when no session is stored', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          secureStorageProvider.overrideWithValue(FakeSecureStorageService()),
+        ],
+        child: const AsnanApp(),
+      ),
+    );
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Sign in — coming soon'), findsOneWidget);
+    expect(find.text('Sign in'), findsWidgets);
   });
 }

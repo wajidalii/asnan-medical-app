@@ -86,6 +86,30 @@ try
 
     builder.Services.AddAuthorization();
 
+    // Native Android/iOS HTTP clients aren't subject to CORS at all — this
+    // exists for the Flutter *web* target (used for local dev/testing here)
+    // and any future admin web app. Development allows any localhost origin
+    // since Flutter's web debug server picks an arbitrary port; everywhere
+    // else only the explicitly configured origins are allowed.
+    var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Default", policy =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                policy.SetIsOriginAllowed(origin => Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                        && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+            }
+            else
+            {
+                policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod();
+            }
+        });
+    });
+
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -115,6 +139,8 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseCors("Default");
 
     app.UseAuthentication();
     app.UseAuthorization();

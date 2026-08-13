@@ -2,14 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'access_token_holder.dart';
+import 'api_config.dart';
+import 'session_refresher.dart';
 
 /// Called on a 401 to obtain a fresh access token. Returns null if refresh
 /// failed (session is over — caller should route to login).
-///
-/// The real implementation (rotating-refresh-token exchange against
-/// POST /api/v1/auth/refresh) lands with the authentication feature;
-/// this scaffold only wires the retry plumbing so that feature can slot
-/// straight in without touching the client setup.
 typedef RefreshTokenCallback = Future<String?> Function();
 
 /// Single-flighted: concurrent 401s trigger exactly one refresh call,
@@ -65,17 +62,10 @@ class AuthInterceptor extends Interceptor {
   }
 }
 
-/// Base URL is environment-specific; overridden via --dart-define
-/// (API_BASE_URL) at build time, never hardcoded to a production value.
-const _defaultBaseUrl = 'http://localhost:5199/api/v1';
-
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'API_BASE_URL',
-        defaultValue: _defaultBaseUrl,
-      ),
+      baseUrl: apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),
@@ -85,12 +75,7 @@ final dioProvider = Provider<Dio>((ref) {
     AuthInterceptor(
       dio: dio,
       readAccessToken: () => ref.read(accessTokenHolderProvider),
-      onRefresh: () async {
-        // TODO(auth-feature): exchange the stored refresh token for a new
-        // access/refresh pair via POST /api/v1/auth/refresh. Returns null
-        // (no refresh performed) until that feature lands.
-        return null;
-      },
+      onRefresh: () => refreshAccessToken(ref),
     ),
   );
 
