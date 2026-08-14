@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/photo_picker_service.dart';
 import '../domain/gender.dart';
@@ -283,6 +285,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   : const Text('Save'),
             ),
             const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () => context.pushNamed(AppRoutes.sessions),
+              icon: const Icon(Icons.devices),
+              label: const Text('Manage devices & sessions'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _confirmDeleteAccount,
               style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),

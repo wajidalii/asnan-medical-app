@@ -215,4 +215,58 @@ public class RefreshTokenServiceTests
         var afterLogout = await service.GetActiveSessionsAsync(user.Id);
         Assert.Empty(afterLogout);
     }
+
+    [Fact]
+    public async Task RevokeSessionAsync_OwnSession_RevokesItAndReturnsTrue()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var (user, session, _) = await SeedLoggedInUserAsync(db);
+        var service = CreateService(db);
+
+        var revoked = await service.RevokeSessionAsync(user.Id, session.Id);
+
+        Assert.True(revoked);
+        await db.Entry(session).ReloadAsync();
+        Assert.NotNull(session.RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeSessionAsync_AnotherUsersSession_ReturnsFalseAndDoesNotRevoke()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var (_, session, _) = await SeedLoggedInUserAsync(db);
+        var service = CreateService(db);
+
+        var revoked = await service.RevokeSessionAsync(Guid.NewGuid(), session.Id);
+
+        Assert.False(revoked);
+        await db.Entry(session).ReloadAsync();
+        Assert.Null(session.RevokedAtUtc);
+    }
+
+    [Fact]
+    public async Task RevokeSessionAsync_AlreadyRevokedSession_ReturnsFalse()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var (user, session, _) = await SeedLoggedInUserAsync(db);
+        session.RevokedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var revoked = await service.RevokeSessionAsync(user.Id, session.Id);
+
+        Assert.False(revoked);
+    }
+
+    [Fact]
+    public async Task RevokeSessionAsync_UnknownSessionId_ReturnsFalse()
+    {
+        var db = CreateDb(Guid.NewGuid().ToString());
+        var (user, _, _) = await SeedLoggedInUserAsync(db);
+        var service = CreateService(db);
+
+        var revoked = await service.RevokeSessionAsync(user.Id, Guid.NewGuid());
+
+        Assert.False(revoked);
+    }
 }

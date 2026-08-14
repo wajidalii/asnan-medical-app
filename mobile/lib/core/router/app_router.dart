@@ -16,6 +16,7 @@ import '../../features/notifications/presentation/notification_preferences_scree
 import '../../features/payments/presentation/payment_confirmation_screen.dart';
 import '../../features/payments/presentation/payment_review_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/sessions/presentation/sessions_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
 /// Route names are used (not raw path strings) everywhere a route is
@@ -37,6 +38,7 @@ abstract final class AppRoutes {
   static const chat = 'chat';
   static const notificationPreferences = 'notification-preferences';
   static const profile = 'profile';
+  static const sessions = 'sessions';
 }
 
 /// Push-notification deep links (`asnan://appointments/{id}`,
@@ -113,6 +115,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'profile',
             name: AppRoutes.profile,
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: 'sessions',
+            name: AppRoutes.sessions,
+            builder: (context, state) => const SessionsScreen(),
           ),
           GoRoute(
             path: 'appointments',
