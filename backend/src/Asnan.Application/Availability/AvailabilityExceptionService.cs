@@ -1,5 +1,7 @@
 using Asnan.Application.Common;
+using Asnan.Application.Notifications;
 using Asnan.Domain.Entities;
+using Asnan.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Asnan.Application.Availability;
@@ -7,10 +9,12 @@ namespace Asnan.Application.Availability;
 public class AvailabilityExceptionService : IAvailabilityExceptionService
 {
     private readonly IApplicationDbContext _db;
+    private readonly INotificationDispatchService _notificationDispatch;
 
-    public AvailabilityExceptionService(IApplicationDbContext db)
+    public AvailabilityExceptionService(IApplicationDbContext db, INotificationDispatchService notificationDispatch)
     {
         _db = db;
+        _notificationDispatch = notificationDispatch;
     }
 
     public async Task<AvailabilityExceptionListResult> GetAllAsync(Guid doctorId, CallerContext caller, CancellationToken cancellationToken = default)
@@ -64,6 +68,8 @@ public class AvailabilityExceptionService : IAvailabilityExceptionService
         _db.DoctorAvailabilityExceptions.Add(exception);
         await _db.SaveChangesAsync(cancellationToken);
 
+        await NotifyAffectedPatientsAsync(doctor, exception, cancellationToken);
+
         return new AvailabilityExceptionMutationResult(AvailabilityExceptionMutationStatus.Success, ToDto(exception));
     }
 
@@ -98,6 +104,8 @@ public class AvailabilityExceptionService : IAvailabilityExceptionService
         exception.Reason = dto.Reason;
         exception.UpdatedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+
+        await NotifyAffectedPatientsAsync(doctor, exception, cancellationToken);
 
         return new AvailabilityExceptionMutationResult(AvailabilityExceptionMutationStatus.Success, ToDto(exception));
     }
@@ -154,4 +162,46 @@ public class AvailabilityExceptionService : IAvailabilityExceptionService
     }
 
     private static AvailabilityExceptionDto ToDto(DoctorAvailabilityException e) => new(e.Id, e.Date, e.Type, e.StartTime, e.EndTime, e.Reason);
+
+    /// <summary>
+    /// Notifies patients whose already-Scheduled appointment falls inside a
+    /// new/changed <see cref="AvailabilityExceptionType.Unavailable"/>
+    /// window — issue #31's "doctor availability changes" trigger.
+    /// ExtraAvailability additions don't affect any existing booking, so
+    /// they're not notified. This does not itself cancel/move the affected
+    /// appointment(s); it's a "please check your appointment" nudge, not a
+    /// new cancellation-cascade feature.
+    /// </summary>
+    private async Task NotifyAffectedPatientsAsync(DoctorProfile doctor, DoctorAvailabilityException exception, CancellationToken cancellationToken)
+    {
+        if (exception.Type != AvailabilityExceptionType.Unavailable)
+        {
+            return;
+        }
+
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(doctor.TimeZoneId);
+        var windowStartLocal = exception.Date.ToDateTime(exception.StartTime ?? TimeOnly.MinValue);
+        var windowEndLocal = exception.StartTime is null || exception.EndTime is null
+            ? exception.Date.AddDays(1).ToDateTime(TimeOnly.MinValue)
+            : exception.Date.ToDateTime(exception.EndTime.Value);
+        var windowStartUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowStartLocal, DateTimeKind.Unspecified), timeZone);
+        var windowEndUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowEndLocal, DateTimeKind.Unspecified), timeZone);
+
+        var affectedAppointments = await _db.Appointments
+            .Where(a => a.DoctorProfileId == doctor.Id && a.Status == AppointmentStatus.Scheduled)
+            .Where(a => a.SlotStartUtc < windowEndUtc && a.SlotEndUtc > windowStartUtc)
+            .ToListAsync(cancellationToken);
+
+        foreach (var appointment in affectedAppointments)
+        {
+            await _notificationDispatch.DispatchAsync(
+                appointment.PatientUserId,
+                NotificationCategory.DoctorAvailability,
+                new PushNotification(
+                    "Doctor availability changed",
+                    $"Dr. {doctor.FullName}'s availability has changed — please check your appointment.",
+                    $"asnan://appointments/{appointment.Id}"),
+                cancellationToken);
+        }
+    }
 }

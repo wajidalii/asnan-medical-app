@@ -1,19 +1,30 @@
 using Asnan.Application.Common;
+using Asnan.Application.Notifications;
 using Asnan.Domain.Entities;
 using Asnan.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Asnan.Application.Payments;
 
+/// <summary>Which push (if any) to send once ProcessWebhookAsync's SaveChangesAsync has actually committed — see the dispatch-after-commit note on ProcessWebhookAsync.</summary>
+public enum PaymentNotificationOutcome
+{
+    None,
+    Scheduled,
+    PaymentFailed,
+}
+
 public class PaymentService : IPaymentService
 {
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProvider _paymentProvider;
+    private readonly INotificationDispatchService _notificationDispatch;
 
-    public PaymentService(IApplicationDbContext db, IPaymentProvider paymentProvider)
+    public PaymentService(IApplicationDbContext db, IPaymentProvider paymentProvider, INotificationDispatchService notificationDispatch)
     {
         _db = db;
         _paymentProvider = paymentProvider;
+        _notificationDispatch = notificationDispatch;
     }
 
     public async Task<CreateCheckoutResult> CreateCheckoutAsync(Guid patientUserId, CreateCheckoutDto dto, CancellationToken cancellationToken = default)
@@ -110,14 +121,9 @@ public class PaymentService : IPaymentService
         var appointment = await _db.Appointments.FirstAsync(a => a.Id == transaction.AppointmentId, cancellationToken);
         var now = DateTime.UtcNow;
 
-        if (verification.Outcome == PaymentEventOutcome.Failed)
-        {
-            await HandleFailedPaymentAsync(appointment, transaction, verification, now, cancellationToken);
-        }
-        else
-        {
-            await HandleSucceededPaymentAsync(appointment, transaction, verification, now, cancellationToken);
-        }
+        var notificationOutcome = verification.Outcome == PaymentEventOutcome.Failed
+            ? await HandleFailedPaymentAsync(appointment, transaction, verification, now, cancellationToken)
+            : await HandleSucceededPaymentAsync(appointment, transaction, verification, now, cancellationToken);
 
         _db.ProcessedWebhookEvents.Add(new ProcessedWebhookEvent { ProviderEventId = verification.ProviderEventId, ProcessedAtUtc = now });
 
@@ -131,10 +137,41 @@ public class PaymentService : IPaymentService
             return new ProcessWebhookResult(ProcessWebhookStatus.AlreadyProcessed);
         }
 
+        // Dispatched only after the commit above actually succeeds — a
+        // concurrent duplicate delivery that loses the race above returns
+        // AlreadyProcessed and never reaches here, so exactly one push goes
+        // out per real outcome regardless of how many times the provider
+        // retries the webhook (issue #31's "exactly one send" requirement).
+        await DispatchPaymentNotificationAsync(appointment, notificationOutcome, cancellationToken);
+
         return new ProcessWebhookResult(ProcessWebhookStatus.Processed);
     }
 
-    private async Task HandleFailedPaymentAsync(Appointment appointment, PaymentTransaction transaction, PaymentVerificationResult verification, DateTime now, CancellationToken cancellationToken)
+    private async Task DispatchPaymentNotificationAsync(Appointment appointment, PaymentNotificationOutcome outcome, CancellationToken cancellationToken)
+    {
+        switch (outcome)
+        {
+            case PaymentNotificationOutcome.Scheduled:
+                var doctor = await _db.DoctorProfiles.FirstAsync(d => d.Id == appointment.DoctorProfileId, cancellationToken);
+                await _notificationDispatch.DispatchAsync(
+                    appointment.PatientUserId,
+                    NotificationCategory.AppointmentUpdates,
+                    new PushNotification("Appointment confirmed", $"Your appointment with Dr. {doctor.FullName} is confirmed.", $"asnan://appointments/{appointment.Id}"),
+                    cancellationToken);
+                break;
+            case PaymentNotificationOutcome.PaymentFailed:
+                await _notificationDispatch.DispatchAsync(
+                    appointment.PatientUserId,
+                    NotificationCategory.PaymentUpdates,
+                    new PushNotification("Payment failed", "Your payment could not be processed. Please try booking again.", $"asnan://appointments/{appointment.Id}"),
+                    cancellationToken);
+                break;
+            case PaymentNotificationOutcome.None:
+                break;
+        }
+    }
+
+    private async Task<PaymentNotificationOutcome> HandleFailedPaymentAsync(Appointment appointment, PaymentTransaction transaction, PaymentVerificationResult verification, DateTime now, CancellationToken cancellationToken)
     {
         transaction.Status = PaymentTransactionStatus.Failed;
         transaction.FailureReason = verification.FailureReason;
@@ -142,7 +179,7 @@ public class PaymentService : IPaymentService
 
         if (appointment.Status != AppointmentStatus.PaymentPending)
         {
-            return;
+            return PaymentNotificationOutcome.None;
         }
 
         var history = AppointmentStateMachine.MarkPaymentFailed(appointment, verification.FailureReason ?? "Payment failed.", now);
@@ -154,14 +191,16 @@ public class PaymentService : IPaymentService
             hold.Status = HoldStatus.Released;
             hold.ActiveSlotKey = null;
         }
+
+        return PaymentNotificationOutcome.PaymentFailed;
     }
 
-    private async Task HandleSucceededPaymentAsync(Appointment appointment, PaymentTransaction transaction, PaymentVerificationResult verification, DateTime now, CancellationToken cancellationToken)
+    private async Task<PaymentNotificationOutcome> HandleSucceededPaymentAsync(Appointment appointment, PaymentTransaction transaction, PaymentVerificationResult verification, DateTime now, CancellationToken cancellationToken)
     {
         if (appointment.Status != AppointmentStatus.PaymentPending)
         {
             // Already resolved via another path (or a stale/duplicate-in-spirit delivery) — nothing to do.
-            return;
+            return PaymentNotificationOutcome.None;
         }
 
         // Re-validate the hold rather than trusting that "payment succeeded" also means "the slot is still ours"
@@ -178,7 +217,7 @@ public class PaymentService : IPaymentService
         {
             var failedHistory = AppointmentStateMachine.MarkPaymentFailed(appointment, "Payment captured but the slot hold had already expired; refund required.", now);
             _db.AppointmentStatusHistories.Add(failedHistory);
-            return;
+            return PaymentNotificationOutcome.PaymentFailed;
         }
 
         var scheduledHistory = AppointmentStateMachine.MarkScheduled(appointment, now);
@@ -192,6 +231,8 @@ public class PaymentService : IPaymentService
         _db.ChatConversations.Add(conversation);
         _db.ChatParticipants.Add(new ChatParticipant { ChatConversation = conversation, UserId = appointment.PatientUserId });
         _db.ChatParticipants.Add(new ChatParticipant { ChatConversation = conversation, UserId = doctor.UserId });
+
+        return PaymentNotificationOutcome.Scheduled;
     }
 
     private static CheckoutDto ToCheckoutDto(Appointment appointment, PaymentTransaction transaction) =>

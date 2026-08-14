@@ -1,4 +1,5 @@
 using Asnan.Application.Common;
+using Asnan.Application.Notifications;
 using Asnan.Domain.Entities;
 using Asnan.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +10,13 @@ public class RefundService : IRefundService
 {
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProvider _paymentProvider;
+    private readonly INotificationDispatchService _notificationDispatch;
 
-    public RefundService(IApplicationDbContext db, IPaymentProvider paymentProvider)
+    public RefundService(IApplicationDbContext db, IPaymentProvider paymentProvider, INotificationDispatchService notificationDispatch)
     {
         _db = db;
         _paymentProvider = paymentProvider;
+        _notificationDispatch = notificationDispatch;
     }
 
     public async Task<CancelAndRefundResult> CancelAndRefundAsync(Guid appointmentId, AppointmentStatus cancelledByStatus, Guid initiatedByUserId, CancelAppointmentDto dto, CancellationToken cancellationToken = default)
@@ -40,6 +43,7 @@ public class RefundService : IRefundService
             // Nothing was ever captured for this appointment (shouldn't normally happen for a
             // Scheduled appointment, but defend against it) — cancellation alone is the outcome.
             await _db.SaveChangesAsync(cancellationToken);
+            await DispatchCancellationNotificationAsync(appointment, cancellationToken);
             return new CancelAndRefundResult(CancelAndRefundStatus.Success, new AppointmentCancellationDto(appointment.Id, appointment.Status, null, null, null));
         }
 
@@ -77,6 +81,27 @@ public class RefundService : IRefundService
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        await DispatchCancellationNotificationAsync(appointment, cancellationToken);
+        if (refund.Status == RefundStatus.Succeeded)
+        {
+            // Refund-failed is deliberately silent to the patient — the appointment
+            // stays RefundPending and needs a human/ops retry, not a user-facing push
+            // with nothing actionable in it (see the comment above).
+            await _notificationDispatch.DispatchAsync(
+                appointment.PatientUserId,
+                NotificationCategory.PaymentUpdates,
+                new PushNotification("Refund completed", $"Your refund of {refund.Currency} {refund.Amount:F2} has been processed.", $"asnan://appointments/{appointment.Id}"),
+                cancellationToken);
+        }
+
         return new CancelAndRefundResult(CancelAndRefundStatus.Success, new AppointmentCancellationDto(appointment.Id, appointment.Status, refund.Id, refund.Amount, refund.Status));
     }
+
+    /// <summary>Scope note: only the patient is notified, not the doctor — see issue #31's PR description for why a two-sided fan-out was left out of this pass.</summary>
+    private Task DispatchCancellationNotificationAsync(Appointment appointment, CancellationToken cancellationToken) =>
+        _notificationDispatch.DispatchAsync(
+            appointment.PatientUserId,
+            NotificationCategory.AppointmentUpdates,
+            new PushNotification("Appointment cancelled", "Your appointment has been cancelled.", $"asnan://appointments/{appointment.Id}"),
+            cancellationToken);
 }
