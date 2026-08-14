@@ -5,6 +5,7 @@ using Asnan.Application.Availability;
 using Asnan.Application.Doctors;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
+using Asnan.Application.Reminders;
 using Asnan.Application.Specialties;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,9 @@ public static class DependencyInjection
 
         services.Configure<CancellationPolicyOptions>(configuration.GetSection(CancellationPolicyOptions.SectionName));
         services.AddScoped<IAppointmentService, AppointmentService>();
+
+        services.Configure<ReminderOptions>(configuration.GetSection(ReminderOptions.SectionName));
+        services.AddScoped<IReminderSchedulingService, ReminderSchedulingService>();
 
         return services;
     }

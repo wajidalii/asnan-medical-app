@@ -2,10 +2,12 @@ using Asnan.Application.Auth;
 using Asnan.Application.Common;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
+using Asnan.Application.Reminders;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Otps;
 using Asnan.Infrastructure.Payments;
 using Asnan.Infrastructure.Persistence;
+using Asnan.Infrastructure.Reminders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +34,11 @@ public static class DependencyInjection
 
         AddOtpProviders(services, configuration, isDevelopment);
         AddPaymentProvider(services, configuration, isDevelopment);
+
+        // Unlike the OTP/payment mocks, this stub isn't dev-gated: logging
+        // instead of pushing has no safety implications, it just means
+        // reminders aren't actually delivered until Milestone 8 replaces it.
+        services.AddScoped<IReminderSender, LoggingReminderSender>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

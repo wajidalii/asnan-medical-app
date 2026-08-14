@@ -50,6 +50,8 @@ public interface IApplicationDbContext
 
     DbSet<Refund> Refunds { get; }
 
+    DbSet<Reminder> Reminders { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
