@@ -11,8 +11,13 @@ namespace Asnan.Api.Tests;
 /// HTTP-level tests for the dev-only mock-payment confirm endpoint (issue
 /// #19) — proves the DI wiring (MockPaymentProvider registered against both
 /// IPaymentProvider and IMockPaymentProviderConfirmation) actually resolves
-/// through the real host, not just in isolation.
+/// through the real host, not just in isolation. Tagged into the "Database"
+/// collection (despite not touching the DB itself) purely to serialize
+/// against the other WebApplicationFactory&lt;Program&gt;-based test classes —
+/// two concurrent host builds otherwise race on HostFactoryResolver's shared
+/// static state (same class of issue DatabaseFixture's doc comment covers).
 /// </summary>
+[Collection("Database")]
 public class MockPaymentsControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
