@@ -1,3 +1,4 @@
+using Asnan.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Asnan.Api.Middleware;
@@ -24,23 +25,34 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (InvalidAppointmentTransitionException ex)
+        {
+            _logger.LogWarning(ex, "Invalid appointment transition attempted processing {Method} {Path}", context.Request.Method, context.Request.Path);
+
+            await WriteProblemAsync(context, StatusCodes.Status409Conflict, "This appointment cannot make that transition.", "https://tools.ietf.org/html/rfc7231#section-6.5.8");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception processing {Method} {Path}", context.Request.Method, context.Request.Path);
 
-            var problem = new ProblemDetails
-            {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "An unexpected error occurred.",
-                Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
-                Instance = context.Request.Path,
-            };
-            problem.Extensions["traceId"] = context.TraceIdentifier;
-
-            context.Response.ContentType = "application/problem+json";
-            context.Response.StatusCode = problem.Status.Value;
-
-            await context.Response.WriteAsJsonAsync(problem);
+            await WriteProblemAsync(context, StatusCodes.Status500InternalServerError, "An unexpected error occurred.", "https://tools.ietf.org/html/rfc7231#section-6.6.1");
         }
+    }
+
+    private static async Task WriteProblemAsync(HttpContext context, int statusCode, string title, string type)
+    {
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Type = type,
+            Instance = context.Request.Path,
+        };
+        problem.Extensions["traceId"] = context.TraceIdentifier;
+
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = statusCode;
+
+        await context.Response.WriteAsJsonAsync(problem);
     }
 }

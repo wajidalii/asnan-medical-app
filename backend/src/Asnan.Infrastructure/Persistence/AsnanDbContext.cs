@@ -39,6 +39,10 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<AppointmentHold> AppointmentHolds => Set<AppointmentHold>();
 
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<AppointmentStatusHistory> AppointmentStatusHistories => Set<AppointmentStatusHistory>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

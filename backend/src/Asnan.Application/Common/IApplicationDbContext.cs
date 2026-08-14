@@ -36,6 +36,10 @@ public interface IApplicationDbContext
 
     DbSet<AppointmentHold> AppointmentHolds { get; }
 
+    DbSet<Appointment> Appointments { get; }
+
+    DbSet<AppointmentStatusHistory> AppointmentStatusHistories { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
