@@ -1,0 +1,89 @@
+# Local/staging stack — see DEPLOYMENT.md for every environment variable
+# this reads, and for the explicit migration step (never run automatically
+# by any service here; see the `migrator` profile below).
+#
+# Quick start:
+#   cp .env.example .env            # fill in real values
+#   ./deploy/nginx/generate-dev-cert.sh
+#   docker compose run --rm migrator
+#   docker compose up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-asnan}
+      MYSQL_USER: ${MYSQL_USER:-asnan}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Provisioned per ARCHITECTURE.md §14's target deployment diagram
+  # (a future SignalR backplane / distributed rate-limit store once the API
+  # runs as more than one instance); nothing in the app talks to it yet.
+  redis:
+    image: redis:7-alpine
+
+  # Not started by `docker compose up` (see the "tools" profile) — the
+  # explicit migration step ARCHITECTURE.md §14 requires. Run with
+  # `docker compose run --rm migrator`.
+  migrator:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      target: migrator
+    environment:
+      ConnectionStrings__Default: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE:-asnan};User=${MYSQL_USER:-asnan};Password=${MYSQL_PASSWORD};"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      # Defaults to Development so the stack boots with the Mock OTP/payment
+      # providers out of the box (see DependencyInjection.cs's
+      # RequireDevelopmentIfMock — only Mock exists today per issue #41's
+      # tracking). Real deploys MUST set this to Production and configure
+      # real providers below — see DEPLOYMENT.md.
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Default: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE:-asnan};User=${MYSQL_USER:-asnan};Password=${MYSQL_PASSWORD};"
+      Jwt__Issuer: ${JWT_ISSUER:-asnan-api}
+      Jwt__Audience: ${JWT_AUDIENCE:-asnan-app}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Otp__HashingKey: ${OTP_HASHING_KEY}
+      OtpProvider__Email: ${OTP_PROVIDER_EMAIL:-Mock}
+      OtpProvider__Sms: ${OTP_PROVIDER_SMS:-Mock}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0:-}
+      Payment__Provider: ${PAYMENT_PROVIDER:-Mock}
+      Payment__MockWebhookSigningKey: ${PAYMENT_MOCK_WEBHOOK_SIGNING_KEY:-}
+      Notification__Provider: ${NOTIFICATION_PROVIDER:-}
+      Notification__Fcm__CredentialsJson: ${NOTIFICATION_FCM_CREDENTIALS_JSON:-}
+    volumes:
+      - patient-photos:/app/App_Data/patient-photos
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "8443:443"
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  mysql-data:
+  patient-photos:
