@@ -4,6 +4,7 @@ using Asnan.Application.Auth;
 using Asnan.Application.Availability;
 using Asnan.Application.Chat;
 using Asnan.Application.Doctors;
+using Asnan.Application.Notifications;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
 using Asnan.Application.Reminders;
@@ -50,6 +51,9 @@ public static class DependencyInjection
         services.AddScoped<IReminderSchedulingService, ReminderSchedulingService>();
 
         services.AddScoped<IChatService, ChatService>();
+
+        services.AddScoped<INotificationDeviceService, NotificationDeviceService>();
+        services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
 
         return services;
     }

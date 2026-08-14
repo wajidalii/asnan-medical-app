@@ -1,15 +1,20 @@
 using Asnan.Application.Auth;
 using Asnan.Application.Chat;
 using Asnan.Application.Common;
+using Asnan.Application.Notifications;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
 using Asnan.Application.Reminders;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Chat;
+using Asnan.Infrastructure.Notifications;
 using Asnan.Infrastructure.Otps;
 using Asnan.Infrastructure.Payments;
 using Asnan.Infrastructure.Persistence;
 using Asnan.Infrastructure.Reminders;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,6 +49,8 @@ public static class DependencyInjection
 
         // Same rationale as IReminderSender — not dev-gated.
         services.AddScoped<IOfflineMessageNotifier, LoggingOfflineMessageNotifier>();
+
+        AddNotificationSender(services, configuration);
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -80,6 +87,50 @@ public static class DependencyInjection
         services.AddScoped<MockPaymentProvider>();
         services.AddScoped<IPaymentProvider>(sp => sp.GetRequiredService<MockPaymentProvider>());
         services.AddScoped<IMockPaymentProviderConfirmation>(sp => sp.GetRequiredService<MockPaymentProvider>());
+    }
+
+    /// <summary>
+    /// Unlike AddOtpProviders/AddPaymentProvider, this is deliberately NOT
+    /// gated to Development — see NoOpNotificationSender's doc comment for
+    /// why logging instead of pushing carries no safety implication. Only
+    /// explicitly selecting "Fcm" without configured credentials is treated
+    /// as a hard misconfiguration (fail fast rather than silently drop pushes).
+    /// </summary>
+    private static void AddNotificationSender(IServiceCollection services, IConfiguration configuration)
+    {
+        var provider = configuration["Notification:Provider"] ?? string.Empty;
+
+        if (!string.Equals(provider, "Fcm", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<INotificationSender, NoOpNotificationSender>();
+            return;
+        }
+
+        var credentialsJson = configuration["Notification:Fcm:CredentialsJson"];
+        if (string.IsNullOrWhiteSpace(credentialsJson))
+        {
+            throw new InvalidOperationException(
+                "Notification:Provider is \"Fcm\" but Notification:Fcm:CredentialsJson is not configured.");
+        }
+
+        var app = GetOrCreateFirebaseApp(credentialsJson);
+        services.AddSingleton(FirebaseMessaging.GetMessaging(app));
+        services.AddScoped<INotificationSender, FcmNotificationSender>();
+    }
+
+    /// <summary>FirebaseApp.Create throws if an app with the given name already exists in this process — guard for host restarts within the same process (e.g. test hosts). GetInstance returns null (not an exception) when no such app exists yet.</summary>
+    private static FirebaseApp GetOrCreateFirebaseApp(string credentialsJson)
+    {
+        const string appName = "asnan-fcm";
+
+        var existing = FirebaseApp.GetInstance(appName);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var credential = CredentialFactory.FromJson<ServiceAccountCredential>(credentialsJson).ToGoogleCredential();
+        return FirebaseApp.Create(new AppOptions { Credential = credential }, appName);
     }
 
     private static void RequireDevelopmentIfMock(string provider, string configKey, bool isDevelopment)

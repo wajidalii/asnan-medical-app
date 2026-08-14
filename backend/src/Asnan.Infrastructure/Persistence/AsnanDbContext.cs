@@ -59,6 +59,10 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<MessageReadStatus> MessageReadStatuses => Set<MessageReadStatus>();
 
+    public DbSet<NotificationDevice> NotificationDevices => Set<NotificationDevice>();
+
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -56,6 +56,10 @@ public interface IApplicationDbContext
 
     DbSet<MessageReadStatus> MessageReadStatuses { get; }
 
+    DbSet<NotificationDevice> NotificationDevices { get; }
+
+    DbSet<NotificationPreference> NotificationPreferences { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
