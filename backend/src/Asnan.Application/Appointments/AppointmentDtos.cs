@@ -72,3 +72,14 @@ public record CancelAppointmentResult(CancelAppointmentStatus Status, Payments.A
 public record CancellationPreviewDto(Guid AppointmentId, bool IsAllowed, int RefundPercentage, decimal RefundAmount, string Currency);
 
 public record PreviewCancellationResult(CancelAppointmentStatus Status, CancellationPreviewDto? Preview = null);
+
+public enum GetAppointmentStatus
+{
+    Success,
+    AppointmentNotFound,
+
+    /// <summary>Caller is neither the appointment's patient, its doctor, nor an admin.</summary>
+    Forbidden,
+}
+
+public record GetAppointmentResult(GetAppointmentStatus Status, AppointmentSummaryDto? Appointment = null);

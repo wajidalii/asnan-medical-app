@@ -12,6 +12,7 @@ import '../../features/booking/presentation/booking_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/doctors/presentation/doctor_detail_screen.dart';
 import '../../features/doctors/presentation/doctor_list_screen.dart';
+import '../../features/notifications/presentation/notification_preferences_screen.dart';
 import '../../features/payments/presentation/payment_confirmation_screen.dart';
 import '../../features/payments/presentation/payment_review_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -33,12 +34,16 @@ abstract final class AppRoutes {
   static const appointments = 'appointments';
   static const appointmentDetails = 'appointment-details';
   static const chat = 'chat';
+  static const notificationPreferences = 'notification-preferences';
 }
 
-/// Deep links use the `asnan://` custom scheme (registered in
-/// AndroidManifest.xml's intent-filter and Info.plist's CFBundleURLTypes).
-/// Real targets (asnan://appointments/{id}, asnan://chat/{conversationId})
-/// are added as those features land; only the scheme plumbing exists here.
+/// Push-notification deep links (`asnan://appointments/{id}`,
+/// `asnan://chat/{conversationId}` — issue #32) are handled imperatively by
+/// DeepLinkService via this same router's `pushNamed`, not via new route
+/// entries: appointment links fetch the full AppointmentSummary first (see
+/// AppointmentsRepository.getById, added for exactly this) then push
+/// appointmentDetails with it as `extra`, and chat links push the chat
+/// route directly since its only dynamic segment is conversationId.
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
@@ -98,6 +103,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(
+            path: 'notification-preferences',
+            name: AppRoutes.notificationPreferences,
+            builder: (context, state) => const NotificationPreferencesScreen(),
+          ),
+          GoRoute(
             path: 'appointments',
             name: AppRoutes.appointments,
             builder: (context, state) => const AppointmentsListScreen(),
@@ -105,23 +115,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'details',
                 name: AppRoutes.appointmentDetails,
-                // Passed via `extra` (the caller already has the full
-                // AppointmentSummary from the list) rather than a path
-                // param + a second GET — no single-appointment read
-                // endpoint exists server-side, deliberately (see #24/#26).
+                // Passed via `extra` — the caller already has the full
+                // AppointmentSummary, either from the list screen or (for a
+                // deep link) a GET /appointments/{id} fetch done beforehand.
                 builder: (context, state) => AppointmentDetailsScreen(appointment: state.extra! as AppointmentSummary),
-                routes: [
-                  GoRoute(
-                    path: 'chat/:conversationId',
-                    name: AppRoutes.chat,
-                    builder: (context, state) => ChatScreen(
-                      conversationId: state.pathParameters['conversationId']!,
-                      title: state.extra! as String,
-                    ),
-                  ),
-                ],
               ),
             ],
+          ),
+          // A sibling of appointments/details, not nested under it — a chat
+          // deep link (issue #32) only ever has a conversationId, and
+          // nesting under appointment-details would require also supplying
+          // that route's own `extra` (the full AppointmentSummary) just to
+          // satisfy an ancestor page neither the link nor ChatScreen itself
+          // needs.
+          GoRoute(
+            path: 'chat/:conversationId',
+            name: AppRoutes.chat,
+            builder: (context, state) => ChatScreen(
+              conversationId: state.pathParameters['conversationId']!,
+              title: state.extra! as String,
+            ),
           ),
         ],
       ),

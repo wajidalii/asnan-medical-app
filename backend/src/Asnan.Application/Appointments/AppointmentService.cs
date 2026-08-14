@@ -166,6 +166,39 @@ public class AppointmentService : IAppointmentService
             new CancellationPreviewDto(appointment.Id, isAllowed, refundPercentage, refundAmount, appointment.Currency));
     }
 
+    public async Task<GetAppointmentResult> GetByIdAsync(Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken = default)
+    {
+        var appointment = await _db.Appointments.Include(a => a.DoctorProfile).FirstOrDefaultAsync(a => a.Id == appointmentId, cancellationToken);
+        if (appointment is null)
+        {
+            return new GetAppointmentResult(GetAppointmentStatus.AppointmentNotFound);
+        }
+
+        var isAuthorized = callerIsAdmin || appointment.PatientUserId == callerId || appointment.DoctorProfile.UserId == callerId;
+        if (!isAuthorized)
+        {
+            return new GetAppointmentResult(GetAppointmentStatus.Forbidden);
+        }
+
+        var conversationId = await _db.ChatConversations
+            .Where(c => c.AppointmentId == appointment.Id)
+            .Select(c => (Guid?)c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var dto = new AppointmentSummaryDto(
+            appointment.Id,
+            appointment.DoctorProfileId,
+            appointment.DoctorProfile.FullName,
+            appointment.SlotStartUtc,
+            appointment.SlotEndUtc,
+            appointment.Status,
+            appointment.ConsultationFee,
+            appointment.Currency,
+            conversationId);
+
+        return new GetAppointmentResult(GetAppointmentStatus.Success, dto);
+    }
+
     /// <summary>Shared load + object-level-authorization + cancellability check for CancelAsync/PreviewCancellationAsync.</summary>
     private async Task<(Appointment? Appointment, AppointmentStatus? CancelledByStatus, CancelAppointmentStatus? Error)> AuthorizeAsync(
         Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken)
