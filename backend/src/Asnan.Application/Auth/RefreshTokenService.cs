@@ -149,4 +149,19 @@ public class RefreshTokenService : IRefreshTokenService
             .Select(s => new SessionSummary(s.Id, s.DeviceId, s.DeviceName, s.LastSeenAtUtc, s.AbsoluteExpiresAtUtc))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<bool> RevokeSessionAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = await _db.UserSessions
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
+
+        if (session is null || session.RevokedAtUtc is not null)
+        {
+            return false;
+        }
+
+        session.RevokedAtUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }

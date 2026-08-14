@@ -91,4 +91,13 @@ public class AuthController : ControllerBase
         var sessions = await _refreshTokenService.GetActiveSessionsAsync(User.GetUserId(), cancellationToken);
         return Ok(sessions);
     }
+
+    /// <summary>Issue #35 — revokes one specific device's session, unlike POST /logout (the caller's own current session only) or /logout-all (every session).</summary>
+    [HttpDelete("sessions/{id:guid}")]
+    [Authorize]
+    public async Task<IActionResult> RevokeSession(Guid id, CancellationToken cancellationToken)
+    {
+        var revoked = await _refreshTokenService.RevokeSessionAsync(User.GetUserId(), id, cancellationToken);
+        return revoked ? NoContent() : NotFound();
+    }
 }
