@@ -117,6 +117,14 @@ public class PaymentsControllerTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    public async Task Checkout_Unauthenticated_ReturnsUnauthorized()
+    {
+        var response = await CreateClient().PostAsJsonAsync("/api/v1/payments/checkout", new CreateCheckoutDto("irrelevant-token"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Checkout_ForUnknownHoldToken_ReturnsNotFound()
     {
         var (_, token) = await CreatePatientTokenAsync();
@@ -203,6 +211,37 @@ public class PaymentsControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         var historyCount = await db.AppointmentStatusHistories.CountAsync(h => h.AppointmentId == checkout.AppointmentId && h.ToStatus == AppointmentStatus.Scheduled);
         Assert.Equal(1, historyCount);
+    }
+
+    [Fact]
+    public async Task DuplicateWebhookDelivery_UnderConcurrentDelivery_IsStillANoOp()
+    {
+        // Same scenario as DuplicateWebhookDelivery_IsANoOp, but the duplicate
+        // arrives concurrently rather than sequentially — proves the
+        // ProcessedWebhookEvents unique-index race handling (PaymentService's
+        // catch (DbUpdateException) branch) actually holds under real
+        // simultaneous delivery, not just back-to-back awaited calls.
+        var (doctorId, _, slotStartUtc, slotEndUtc) = await SeedDoctorWithScheduleAsync();
+        var (_, token) = await CreatePatientTokenAsync();
+        var client = CreateClient(token);
+        var holdToken = await CreateHoldAsync(client, doctorId, slotStartUtc, slotEndUtc);
+        var checkout = await (await client.PostAsJsonAsync("/api/v1/payments/checkout", new CreateCheckoutDto(holdToken))).Content.ReadFromJsonAsync<CheckoutDto>();
+        var delivery = await (await client.PostAsJsonAsync(checkout!.RedirectUrl, new { Succeeded = true, FailureReason = (string?)null })).Content.ReadFromJsonAsync<MockWebhookDelivery>();
+
+        const int concurrency = 8;
+        var responses = await Task.WhenAll(Enumerable.Range(0, concurrency).Select(_ => DeliverWebhookAsync(client, delivery!)));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+
+        await using var db = CreateDb();
+        var conversationCount = await db.ChatConversations.CountAsync(c => c.AppointmentId == checkout.AppointmentId);
+        Assert.Equal(1, conversationCount);
+
+        var historyCount = await db.AppointmentStatusHistories.CountAsync(h => h.AppointmentId == checkout.AppointmentId && h.ToStatus == AppointmentStatus.Scheduled);
+        Assert.Equal(1, historyCount);
+
+        var processedEventCount = await db.ProcessedWebhookEvents.CountAsync(e => e.ProviderEventId == delivery!.ProviderEventId);
+        Assert.Equal(1, processedEventCount);
     }
 
     [Fact]

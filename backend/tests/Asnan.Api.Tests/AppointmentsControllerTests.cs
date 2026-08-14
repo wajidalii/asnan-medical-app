@@ -165,6 +165,18 @@ public class AppointmentsControllerTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task Endpoints_WithoutAuthentication_ReturnUnauthorized()
+    {
+        var client = CreateClient();
+        var randomId = Guid.NewGuid();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/appointments")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/api/v1/appointments/{randomId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/api/v1/appointments/{randomId}/cancellation-preview")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync($"/api/v1/appointments/{randomId}/cancel", new RequestCancelAppointmentDto(null))).StatusCode);
+    }
+
+    [Fact]
     public async Task GetById_ByNonParticipant_ReturnsForbidden()
     {
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(43));

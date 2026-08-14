@@ -193,6 +193,17 @@ public class DoctorScheduleAndAvailabilityExceptionControllerTests : IClassFixtu
     }
 
     [Fact]
+    public async Task Unauthenticated_CannotAccessAvailabilityExceptions()
+    {
+        var (doctorUserId, _) = await CreateAuthenticatedUserAsync("Doctor");
+        var doctorId = await SeedDoctorProfileAsync(doctorUserId);
+
+        var response = await CreateClient().GetAsync($"/api/v1/doctors/{doctorId}/availability-exceptions");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task OwningDoctor_CanCreateReadUpdateDeleteAvailabilityException()
     {
         var (doctorUserId, doctorToken) = await CreateAuthenticatedUserAsync("Doctor");
