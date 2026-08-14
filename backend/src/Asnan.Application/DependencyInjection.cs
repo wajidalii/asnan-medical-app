@@ -54,6 +54,7 @@ public static class DependencyInjection
 
         services.AddScoped<INotificationDeviceService, NotificationDeviceService>();
         services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
+        services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 
         return services;
     }

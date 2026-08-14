@@ -7,8 +7,7 @@ namespace Asnan.Infrastructure.Notifications;
 /// Logs instead of pushing — selected whenever Notification:Provider isn't
 /// explicitly "Fcm", including in Production, until real Firebase
 /// credentials exist (external-config follow-up referenced in issue #30).
-/// Same "no safety implication to logging instead of pushing" rationale as
-/// LoggingReminderSender/LoggingOfflineMessageNotifier, so — unlike the
+/// No safety implication to logging instead of pushing, so — unlike the
 /// OTP/Payment mocks — this is not Development-gated.
 /// </summary>
 public class NoOpNotificationSender : INotificationSender

@@ -42,13 +42,11 @@ public static class DependencyInjection
         AddOtpProviders(services, configuration, isDevelopment);
         AddPaymentProvider(services, configuration, isDevelopment);
 
-        // Unlike the OTP/payment mocks, this stub isn't dev-gated: logging
-        // instead of pushing has no safety implications, it just means
-        // reminders aren't actually delivered until Milestone 8 replaces it.
-        services.AddScoped<IReminderSender, LoggingReminderSender>();
-
-        // Same rationale as IReminderSender — not dev-gated.
-        services.AddScoped<IOfflineMessageNotifier, LoggingOfflineMessageNotifier>();
+        // Real push delivery (issue #31) — both go through
+        // INotificationDispatchService, so they inherit its NoOp/Fcm
+        // selection and NotificationPreferences filtering automatically.
+        services.AddScoped<IReminderSender, NotificationReminderSender>();
+        services.AddScoped<IOfflineMessageNotifier, NotificationOfflineMessageNotifier>();
 
         AddNotificationSender(services, configuration);
 
