@@ -1,3 +1,4 @@
+using Asnan.Application.Auditing;
 using Asnan.Application.Common;
 using Asnan.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,17 +11,20 @@ public class LoginService : ILoginService
     private readonly IApplicationDbContext _db;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IAuditLogger _auditLogger;
     private readonly JwtOptions _options;
 
     public LoginService(
         IApplicationDbContext db,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
+        IAuditLogger auditLogger,
         IOptions<JwtOptions> options)
     {
         _db = db;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _auditLogger = auditLogger;
         _options = options.Value;
     }
 
@@ -40,6 +44,10 @@ public class LoginService : ILoginService
         // about which case it was (§4.2: no enumeration via login either).
         if (user is null || user.PasswordHash is null || !_passwordHasher.Verify(password, user.PasswordHash))
         {
+            // identifier (an email/mobile), not a denylisted field — this is
+            // exactly what an audit trail needs to record (ARCHITECTURE.md §13).
+            _auditLogger.Record(user?.Id, "LoginFailed", $"identifier={identifier}");
+            await _db.SaveChangesAsync(cancellationToken);
             return new LoginResult(LoginStatus.InvalidCredentials);
         }
 
@@ -66,6 +74,8 @@ public class LoginService : ILoginService
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name);
         var (accessToken, accessTokenExpiresAtUtc) = _jwtTokenService.GenerateAccessToken(user.Id, roles);
+
+        _auditLogger.Record(user.Id, "LoginSucceeded", $"deviceId={deviceId}");
 
         await _db.SaveChangesAsync(cancellationToken);
 

@@ -9,7 +9,7 @@ namespace Asnan.Api.Tests;
 
 public class LoginServiceTests
 {
-    private static (AsnanDbContext Db, LoginService Service, JwtOptions Options) CreateService()
+    private static (AsnanDbContext Db, LoginService Service, JwtOptions Options) CreateService(RecordingAuditLogger? auditLogger = null)
     {
         var dbOptions = new DbContextOptionsBuilder<AsnanDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -29,7 +29,7 @@ public class LoginServiceTests
 
         var hasher = new Pbkdf2PasswordHasher();
         var jwtService = new JwtTokenService(optionsWrapper);
-        var service = new LoginService(db, hasher, jwtService, optionsWrapper);
+        var service = new LoginService(db, hasher, jwtService, auditLogger ?? new RecordingAuditLogger(), optionsWrapper);
 
         return (db, service, jwtOptions);
     }
@@ -104,5 +104,46 @@ public class LoginServiceTests
         var result = await service.LoginAsync("incomplete@test.local", "any-password-at-all", "device-1", null);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ValidCredentials_RecordsAnAuditLogEntry()
+    {
+        var auditLogger = new RecordingAuditLogger();
+        var (db, service, _) = CreateService(auditLogger);
+        var user = await SeedUserAsync(db, "patient@test.local", "correct horse battery staple");
+
+        await service.LoginAsync("patient@test.local", "correct horse battery staple", "device-1", null);
+
+        var entry = Assert.Single(auditLogger.Entries);
+        Assert.Equal(user.Id, entry.UserId);
+        Assert.Equal("LoginSucceeded", entry.EventType);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WrongPassword_RecordsAFailedAuditLogEntry()
+    {
+        var auditLogger = new RecordingAuditLogger();
+        var (db, service, _) = CreateService(auditLogger);
+        var user = await SeedUserAsync(db, "patient@test.local", "correct horse battery staple");
+
+        await service.LoginAsync("patient@test.local", "wrong-password", "device-1", null);
+
+        var entry = Assert.Single(auditLogger.Entries);
+        Assert.Equal(user.Id, entry.UserId); // known user, wrong password — still identifiable
+        Assert.Equal("LoginFailed", entry.EventType);
+    }
+
+    [Fact]
+    public async Task LoginAsync_UnknownIdentifier_RecordsAFailedAuditLogEntryWithNoUserId()
+    {
+        var auditLogger = new RecordingAuditLogger();
+        var (_, service, _) = CreateService(auditLogger);
+
+        await service.LoginAsync("nobody@test.local", "whatever-password", "device-1", null);
+
+        var entry = Assert.Single(auditLogger.Entries);
+        Assert.Null(entry.UserId); // no such user — matches AuditLog's own doc comment
+        Assert.Equal("LoginFailed", entry.EventType);
     }
 }

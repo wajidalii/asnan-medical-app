@@ -141,7 +141,33 @@ try
             limiterOptions.Window = TimeSpan.FromMinutes(1);
             limiterOptions.QueueLimit = 0;
         });
+        // OTP codes are a more sensitive/abusable resource than login attempts
+        // (each request sends an SMS/email) — a tighter budget than "auth".
+        options.AddFixedWindowLimiter("otp", limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 5;
+            limiterOptions.Window = TimeSpan.FromMinutes(1);
+            limiterOptions.QueueLimit = 0;
+        });
+        // The payment webhook is unauthenticated by design (see PaymentsController)
+        // and protected primarily by signature verification, but still needs a
+        // coarse abuse ceiling; a real provider's retries stay well under this.
+        options.AddFixedWindowLimiter("webhook", limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 60;
+            limiterOptions.Window = TimeSpan.FromMinutes(1);
+            limiterOptions.QueueLimit = 0;
+        });
     });
+
+    if (!builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddHsts(options =>
+        {
+            options.MaxAge = TimeSpan.FromDays(365);
+            options.IncludeSubDomains = true;
+        });
+    }
 
     builder.Services
         .AddHealthChecks()
@@ -151,6 +177,7 @@ try
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
 
     app.UseSerilogRequestLogging();
 
@@ -158,6 +185,10 @@ try
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+    }
+    else
+    {
+        app.UseHsts();
     }
 
     app.UseHttpsRedirection();

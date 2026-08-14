@@ -1,3 +1,4 @@
+using Asnan.Api.Extensions;
 using Asnan.Application.Doctors;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -40,7 +41,7 @@ public class DoctorsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateDoctorDto dto, CancellationToken cancellationToken)
     {
-        var result = await _doctorService.CreateAsync(dto, cancellationToken);
+        var result = await _doctorService.CreateAsync(dto, User.GetUserId(), cancellationToken);
 
         return result.Status switch
         {
@@ -54,7 +55,7 @@ public class DoctorsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateDoctorDto dto, CancellationToken cancellationToken)
     {
-        var result = await _doctorService.UpdateAsync(id, dto, cancellationToken);
+        var result = await _doctorService.UpdateAsync(id, dto, User.GetUserId(), cancellationToken);
 
         return result.Status switch
         {
@@ -67,7 +68,7 @@ public class DoctorsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _doctorService.DeleteAsync(id, cancellationToken);
+        var result = await _doctorService.DeleteAsync(id, User.GetUserId(), cancellationToken);
         return result.Status == DoctorMutationStatus.NotFound ? NotFound() : NoContent();
     }
 }

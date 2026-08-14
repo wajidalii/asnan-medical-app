@@ -5,6 +5,13 @@
     <ProjectReference Include="..\Asnan.Application\Asnan.Application.csproj" />
   </ItemGroup>
 
+  <!-- IHttpContextAccessor (HttpAuditLogger) — part of the shared framework
+       since .NET Core 3.0, not a standalone NuGet package, needed here
+       because this is a plain class library, not Microsoft.NET.Sdk.Web. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
     <!-- MIT-licensed (unlike ImageSharp v3+'s split commercial license) — a

@@ -1,3 +1,4 @@
+using Asnan.Application.Auditing;
 using Asnan.Application.Auth;
 using Asnan.Application.Chat;
 using Asnan.Application.Common;
@@ -6,6 +7,7 @@ using Asnan.Application.Otps;
 using Asnan.Application.Payments;
 using Asnan.Application.Profile;
 using Asnan.Application.Reminders;
+using Asnan.Infrastructure.Auditing;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Chat;
 using Asnan.Infrastructure.Notifications;
@@ -53,6 +55,9 @@ public static class DependencyInjection
         AddNotificationSender(services, configuration);
 
         services.AddScoped<IPatientPhotoService, LocalPatientPhotoService>();
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<IAuditLogger, HttpAuditLogger>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

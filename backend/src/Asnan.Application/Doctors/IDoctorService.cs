@@ -6,9 +6,10 @@ public interface IDoctorService
 
     Task<DoctorProfileDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<DoctorMutationResult> CreateAsync(CreateDoctorDto dto, CancellationToken cancellationToken = default);
+    /// <summary><paramref name="adminUserId"/> is only for the audit trail (ARCHITECTURE.md §13's "admin actions") — DoctorsController is already Admin-role-gated, this isn't an authorization check.</summary>
+    Task<DoctorMutationResult> CreateAsync(CreateDoctorDto dto, Guid adminUserId, CancellationToken cancellationToken = default);
 
-    Task<DoctorMutationResult> UpdateAsync(Guid id, UpdateDoctorDto dto, CancellationToken cancellationToken = default);
+    Task<DoctorMutationResult> UpdateAsync(Guid id, UpdateDoctorDto dto, Guid adminUserId, CancellationToken cancellationToken = default);
 
-    Task<DoctorMutationResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<DoctorMutationResult> DeleteAsync(Guid id, Guid adminUserId, CancellationToken cancellationToken = default);
 }
