@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IAppointmentHoldService, AppointmentHoldService>();
 
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }

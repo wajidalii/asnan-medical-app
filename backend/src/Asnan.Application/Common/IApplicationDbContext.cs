@@ -40,6 +40,14 @@ public interface IApplicationDbContext
 
     DbSet<AppointmentStatusHistory> AppointmentStatusHistories { get; }
 
+    DbSet<PaymentTransaction> PaymentTransactions { get; }
+
+    DbSet<ProcessedWebhookEvent> ProcessedWebhookEvents { get; }
+
+    DbSet<ChatConversation> ChatConversations { get; }
+
+    DbSet<ChatParticipant> ChatParticipants { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a

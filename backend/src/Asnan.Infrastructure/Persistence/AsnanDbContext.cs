@@ -43,6 +43,14 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<AppointmentStatusHistory> AppointmentStatusHistories => Set<AppointmentStatusHistory>();
 
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+
+    public DbSet<ProcessedWebhookEvent> ProcessedWebhookEvents => Set<ProcessedWebhookEvent>();
+
+    public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
+
+    public DbSet<ChatParticipant> ChatParticipants => Set<ChatParticipant>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
