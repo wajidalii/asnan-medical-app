@@ -38,6 +38,7 @@ public static class DependencyInjection
 
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IRefundService, RefundService>();
 
         return services;
     }
