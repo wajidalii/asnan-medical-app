@@ -2,6 +2,7 @@ using System.Reflection;
 using Asnan.Application.Appointments;
 using Asnan.Application.Auth;
 using Asnan.Application.Availability;
+using Asnan.Application.Chat;
 using Asnan.Application.Doctors;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
@@ -47,6 +48,8 @@ public static class DependencyInjection
 
         services.Configure<ReminderOptions>(configuration.GetSection(ReminderOptions.SectionName));
         services.AddScoped<IReminderSchedulingService, ReminderSchedulingService>();
+
+        services.AddScoped<IChatService, ChatService>();
 
         return services;
     }
