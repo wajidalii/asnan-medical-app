@@ -206,4 +206,12 @@ public class RefundControllerTests : IClassFixture<WebApplicationFactory<Program
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Cancel_Unauthenticated_ReturnsUnauthorized()
+    {
+        var response = await CreateClient().PostAsJsonAsync($"/api/v1/admin/appointments/{Guid.NewGuid()}/cancel", new CancelAppointmentDto(null));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

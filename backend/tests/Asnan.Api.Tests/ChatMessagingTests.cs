@@ -243,6 +243,16 @@ public class ChatMessagingTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Endpoints_WithoutAuthentication_ReturnUnauthorized()
+    {
+        var (conversationId, _, _) = await SeedScheduledConversationAsync();
+        var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/api/v1/chat/conversations/{conversationId}/messages")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/api/v1/chat/conversations/{conversationId}/read-status")).StatusCode);
+    }
+
+    [Fact]
     public async Task GetMessages_ForANonParticipant_ReturnsForbidden()
     {
         var (conversationId, _, _) = await SeedScheduledConversationAsync();

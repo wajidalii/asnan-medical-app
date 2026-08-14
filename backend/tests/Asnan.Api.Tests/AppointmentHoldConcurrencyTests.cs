@@ -37,7 +37,17 @@ public class AppointmentHoldConcurrencyTests
         new AppointmentHoldService(db, new AvailabilityComputationService(db), Options.Create(new HoldOptions { TtlMinutes = 5 }));
 
     [Fact]
-    public async Task CreateAsync_ManyConcurrentRequestsForTheSameSlot_ExactlyOneSucceeds()
+    public async Task CreateAsync_ManyConcurrentRequestsForTheSameSlot_ExactlyOneSucceeds() =>
+        await RunConcurrentHoldRaceAsync(concurrency: 10);
+
+    [Fact]
+    public async Task CreateAsync_UnderHighConcurrency_ExactlyOneSucceeds() =>
+        // Issue #37: proves the same slot-locking guarantee holds well past the
+        // Milestone-4 baseline's 10-way race — 50 simultaneous DbContexts,
+        // each on its own connection, all racing for the exact same slot.
+        await RunConcurrentHoldRaceAsync(concurrency: 50);
+
+    private async Task RunConcurrentHoldRaceAsync(int concurrency)
     {
         Guid doctorId;
         Guid patientUserId;
@@ -79,7 +89,6 @@ public class AppointmentHoldConcurrencyTests
             slotEndUtc = slotStartUtc.AddMinutes(30);
         }
 
-        const int concurrency = 10;
         var contexts = Enumerable.Range(0, concurrency).Select(_ => CreateDb()).ToList();
 
         try
@@ -90,9 +99,16 @@ public class AppointmentHoldConcurrencyTests
 
             var results = await Task.WhenAll(tasks);
 
+            // Exactly one winner is the actual correctness guarantee (backed by
+            // the ActiveSlotKey unique index — see this class's doc comment).
+            // A loser can observe either Conflict (lost the DB race) or
+            // SlotNotAvailable (its own availability recheck ran after an
+            // earlier request's hold had already committed) depending on
+            // real-world timing between concurrent requests; both are correct
+            // ways to deny a double-booking, so either is an acceptable "lost".
             Assert.Equal(1, results.Count(r => r.Status == CreateHoldStatus.Success));
-            Assert.Equal(concurrency - 1, results.Count(r => r.Status == CreateHoldStatus.Conflict));
-            Assert.DoesNotContain(results, r => r.Status is CreateHoldStatus.DoctorNotFound or CreateHoldStatus.SlotNotAvailable);
+            Assert.Equal(concurrency - 1, results.Count(r => r.Status is CreateHoldStatus.Conflict or CreateHoldStatus.SlotNotAvailable));
+            Assert.DoesNotContain(results, r => r.Status == CreateHoldStatus.DoctorNotFound);
         }
         finally
         {
