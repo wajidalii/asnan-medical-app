@@ -1,1 +1,3 @@
 prompt.md
+.env
+deploy/nginx/certs/

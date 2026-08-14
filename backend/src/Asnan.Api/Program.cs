@@ -7,6 +7,7 @@ using Asnan.Infrastructure;
 using Asp.Versioning;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -174,6 +175,19 @@ try
         .AddMySql(builder.Configuration.GetConnectionString("Default")!, name: "mysql");
 
     var app = builder.Build();
+
+    // Behind nginx (docker-compose/production — see DEPLOYMENT.md), TLS is
+    // terminated at the proxy and this process only ever sees plain HTTP;
+    // without this, UseHttpsRedirection() below would redirect-loop every
+    // request. KnownNetworks/KnownProxies are cleared because nginx is the
+    // sole ingress on a private compose network here, not a public-facing
+    // untrusted hop.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        KnownNetworks = { },
+        KnownProxies = { },
+    });
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();

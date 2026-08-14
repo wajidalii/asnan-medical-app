@@ -1,0 +1,43 @@
+name: Backend CD
+
+# Builds and pushes the api image on every push to main that touches the
+# backend. Deployment to a remote target is deliberately NOT wired up here —
+# ARCHITECTURE.md §15 lists the deploy target as an open decision, and this
+# workflow shouldn't block on a choice that hasn't been made (see issue #39).
+# Once a target exists, add a `deploy` job after `build-and-push` that runs,
+# in order: the explicit migration step (`docker compose run --rm migrator`
+# or the target's equivalent — see DEPLOYMENT.md), then the rollout itself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-cd.yml"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push api image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/api:latest
+            ghcr.io/${{ github.repository }}/api:${{ github.sha }}

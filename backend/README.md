@@ -2,6 +2,10 @@
 
 ASP.NET Core Web API. See `/ARCHITECTURE.md` at the repo root for the full design.
 
+For the containerized stack (Docker Compose: api/mysql/redis/nginx with local HTTPS), every
+required environment variable, and the CD pipeline, see `/DEPLOYMENT.md` at the repo root instead
+of the raw local-dev workflow below.
+
 ## Local development
 
 Requires a MySQL-protocol-compatible database (MySQL 8 or MariaDB 10.6+).
