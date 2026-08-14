@@ -53,6 +53,11 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
         title: const Text('Find a Doctor'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.event_note),
+            tooltip: 'My appointments',
+            onPressed: () => context.pushNamed(AppRoutes.appointments),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),

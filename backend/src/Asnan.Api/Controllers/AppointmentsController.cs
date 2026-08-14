@@ -50,4 +50,20 @@ public class AppointmentsController : ControllerBase
             _ => throw new InvalidOperationException($"Unhandled {nameof(CancelAppointmentStatus)}: {result.Status}"),
         };
     }
+
+    /// <summary>Read-only — issue #26's cancellation flow shows this before the user confirms.</summary>
+    [HttpGet("{id:guid}/cancellation-preview")]
+    public async Task<IActionResult> PreviewCancellation(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _appointmentService.PreviewCancellationAsync(id, User.GetUserId(), User.IsInRole("Admin"), cancellationToken);
+
+        return result.Status switch
+        {
+            CancelAppointmentStatus.Success => Ok(result.Preview),
+            CancelAppointmentStatus.AppointmentNotFound => NotFound(),
+            CancelAppointmentStatus.Forbidden => Forbid(),
+            CancelAppointmentStatus.NotCancellable => Problem(statusCode: StatusCodes.Status409Conflict, title: "Only a Scheduled appointment can be cancelled."),
+            _ => throw new InvalidOperationException($"Unhandled {nameof(CancelAppointmentStatus)}: {result.Status}"),
+        };
+    }
 }

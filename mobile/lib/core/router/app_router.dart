@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/appointments/domain/appointment_summary.dart';
+import '../../features/appointments/presentation/appointment_details_screen.dart';
+import '../../features/appointments/presentation/appointments_list_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_otp_screen.dart';
 import '../../features/auth/presentation/signup_password_screen.dart';
@@ -26,6 +29,8 @@ abstract final class AppRoutes {
   static const booking = 'booking';
   static const paymentReview = 'payment-review';
   static const paymentConfirmation = 'payment-confirmation';
+  static const appointments = 'appointments';
+  static const appointmentDetails = 'appointment-details';
 }
 
 /// Deep links use the `asnan://` custom scheme (registered in
@@ -87,6 +92,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => PaymentConfirmationScreen(doctorId: state.pathParameters['id']!),
                   ),
                 ],
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'appointments',
+            name: AppRoutes.appointments,
+            builder: (context, state) => const AppointmentsListScreen(),
+            routes: [
+              GoRoute(
+                path: 'details',
+                name: AppRoutes.appointmentDetails,
+                // Passed via `extra` (the caller already has the full
+                // AppointmentSummary from the list) rather than a path
+                // param + a second GET — no single-appointment read
+                // endpoint exists server-side, deliberately (see #24/#26).
+                builder: (context, state) => AppointmentDetailsScreen(appointment: state.extra! as AppointmentSummary),
               ),
             ],
           ),

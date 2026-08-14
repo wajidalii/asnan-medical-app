@@ -209,6 +209,71 @@ public class AppointmentsControllerTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task PreviewCancellation_WellInAdvance_ShowsFullRefundAllowed()
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(53));
+        var (doctorId, _) = await SeedDoctorWithScheduleAsync(date);
+        var slotStartUtc = new DateTime(date.Year, date.Month, date.Day, 9, 0, 0, DateTimeKind.Utc);
+        var (_, token) = await CreateUserTokenAsync("Patient");
+        var client = CreateClient(token);
+        var appointmentId = await BookAndScheduleAppointmentAsync(client, doctorId, slotStartUtc, slotStartUtc.AddMinutes(30));
+
+        var response = await client.GetAsync($"/api/v1/appointments/{appointmentId}/cancellation-preview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var preview = await response.Content.ReadFromJsonAsync<CancellationPreviewDto>();
+        Assert.True(preview!.IsAllowed);
+        Assert.Equal(100, preview.RefundPercentage);
+        Assert.Equal(100m, preview.RefundAmount);
+
+        await using var db = CreateDb();
+        var appointment = await db.Appointments.FirstAsync(a => a.Id == appointmentId);
+        Assert.Equal(AppointmentStatus.Scheduled, appointment.Status); // preview must not mutate anything
+    }
+
+    [Fact]
+    public async Task PreviewCancellation_TooCloseToTheAppointment_ShowsNotAllowedWithoutErroring()
+    {
+        Guid appointmentId;
+        string token;
+        await using (var db = CreateDb())
+        {
+            var doctorUser = new User { Email = $"{Guid.NewGuid()}@test.local", PasswordHash = "irrelevant" };
+            var patientUser = new User { Email = $"{Guid.NewGuid()}@test.local", PasswordHash = "irrelevant" };
+            db.Users.AddRange(doctorUser, patientUser);
+            db.UserRoles.Add(new UserRole { UserId = patientUser.Id, RoleId = RoleIds.Patient });
+
+            var doctor = new DoctorProfile { UserId = doctorUser.Id, FullName = "Dr. Soon Preview", ConsultationFee = 60m, Currency = "USD", TimeZoneId = "UTC" };
+            db.DoctorProfiles.Add(doctor);
+
+            var slotStartUtc = DateTime.UtcNow.AddMinutes(30);
+            var appointment = new Appointment
+            {
+                DoctorProfileId = doctor.Id,
+                PatientUserId = patientUser.Id,
+                SlotStartUtc = slotStartUtc,
+                SlotEndUtc = slotStartUtc.AddMinutes(30),
+                Status = AppointmentStatus.Scheduled,
+                ConsultationFee = 60m,
+                Currency = "USD",
+                SourceHoldId = Guid.NewGuid(),
+            };
+            db.Appointments.Add(appointment);
+            await db.SaveChangesAsync();
+
+            appointmentId = appointment.Id;
+            var jwtService = _factory.Services.CreateScope().ServiceProvider.GetRequiredService<IJwtTokenService>();
+            (token, _) = jwtService.GenerateAccessToken(patientUser.Id, new[] { "Patient" });
+        }
+
+        var response = await CreateClient(token).GetAsync($"/api/v1/appointments/{appointmentId}/cancellation-preview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var preview = await response.Content.ReadFromJsonAsync<CancellationPreviewDto>();
+        Assert.False(preview!.IsAllowed);
+    }
+
+    [Fact]
     public async Task Cancel_ByNonParticipant_ReturnsForbidden()
     {
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(51));

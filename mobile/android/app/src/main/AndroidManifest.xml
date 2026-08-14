@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- device_calendar (features/calendar, #26): "Add to Calendar" writes a
+         single local event to the user's chosen device calendar — no
+         calendar-provider OAuth/sync, per ARCHITECTURE.md §11. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
+    <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <application
         android:label="asnan"
         android:name="${applicationName}"
