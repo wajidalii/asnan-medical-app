@@ -82,8 +82,21 @@ public class AppointmentService : IAppointmentService
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
+        var appointmentIds = appointments.Select(a => a.Id).ToList();
+        var conversationIdsByAppointment = await _db.ChatConversations
+            .Where(c => appointmentIds.Contains(c.AppointmentId))
+            .ToDictionaryAsync(c => c.AppointmentId, c => c.Id, cancellationToken);
+
         var items = appointments.Select(a => new AppointmentSummaryDto(
-            a.Id, a.DoctorProfileId, a.DoctorProfile.FullName, a.SlotStartUtc, a.SlotEndUtc, a.Status, a.ConsultationFee, a.Currency)).ToList();
+            a.Id,
+            a.DoctorProfileId,
+            a.DoctorProfile.FullName,
+            a.SlotStartUtc,
+            a.SlotEndUtc,
+            a.Status,
+            a.ConsultationFee,
+            a.Currency,
+            conversationIdsByAppointment.TryGetValue(a.Id, out var conversationId) ? conversationId : null)).ToList();
 
         return new PagedResult<AppointmentSummaryDto>(items, query.Page, query.PageSize, totalCount);
     }

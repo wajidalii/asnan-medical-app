@@ -139,6 +139,10 @@ public class AppointmentsControllerTests : IClassFixture<WebApplicationFactory<P
 
         Assert.Contains(ownerList!.Items, a => a.DoctorProfileId == doctorId);
         Assert.DoesNotContain(strangerList!.Items, a => a.DoctorProfileId == doctorId);
+
+        // The mobile chat feature (#29) navigates via this id — must be populated once Scheduled.
+        var owned = ownerList.Items.Single(a => a.DoctorProfileId == doctorId);
+        Assert.NotNull(owned.ChatConversationId);
     }
 
     [Fact]

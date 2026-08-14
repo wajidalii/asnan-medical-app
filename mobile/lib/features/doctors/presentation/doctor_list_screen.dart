@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../chat/presentation/unread_badge_provider.dart';
 import '../domain/doctor_sort_by.dart';
 import 'doctor_card.dart';
 import 'doctor_list_controller.dart';
@@ -47,15 +48,23 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(doctorListControllerProvider);
     final controller = ref.read(doctorListControllerProvider.notifier);
+    final unreadCount = ref.watch(unreadBadgeProvider).maybeWhen(data: (count) => count, orElse: () => 0);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find a Doctor'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.event_note),
+            icon: Badge.count(
+              count: unreadCount,
+              isLabelVisible: unreadCount > 0,
+              child: const Icon(Icons.event_note),
+            ),
             tooltip: 'My appointments',
-            onPressed: () => context.pushNamed(AppRoutes.appointments),
+            onPressed: () async {
+              await context.pushNamed(AppRoutes.appointments);
+              ref.invalidate(unreadBadgeProvider);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
