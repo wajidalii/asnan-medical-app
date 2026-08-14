@@ -65,6 +65,8 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

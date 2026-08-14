@@ -2,3 +2,6 @@ bin/
 obj/
 *.user
 .vs/
+
+# Local-disk patient photo storage (LocalPatientPhotoService) — never committed.
+src/Asnan.Api/App_Data/
