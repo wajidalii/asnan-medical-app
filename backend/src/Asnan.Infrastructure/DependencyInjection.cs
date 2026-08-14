@@ -1,9 +1,11 @@
 using Asnan.Application.Auth;
+using Asnan.Application.Chat;
 using Asnan.Application.Common;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
 using Asnan.Application.Reminders;
 using Asnan.Infrastructure.Auth;
+using Asnan.Infrastructure.Chat;
 using Asnan.Infrastructure.Otps;
 using Asnan.Infrastructure.Payments;
 using Asnan.Infrastructure.Persistence;
@@ -39,6 +41,9 @@ public static class DependencyInjection
         // instead of pushing has no safety implications, it just means
         // reminders aren't actually delivered until Milestone 8 replaces it.
         services.AddScoped<IReminderSender, LoggingReminderSender>();
+
+        // Same rationale as IReminderSender — not dev-gated.
+        services.AddScoped<IOfflineMessageNotifier, LoggingOfflineMessageNotifier>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

@@ -106,6 +106,7 @@ try
 
     builder.Services.AddAuthorization();
     builder.Services.AddSignalR();
+    builder.Services.AddSingleton<IChatPresenceTracker, InMemoryChatPresenceTracker>();
 
     // Native Android/iOS HTTP clients aren't subject to CORS at all — this
     // exists for the Flutter *web* target (used for local dev/testing here)

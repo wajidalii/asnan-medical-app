@@ -55,6 +55,10 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Reminder> Reminders => Set<Reminder>();
 
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+
+    public DbSet<MessageReadStatus> MessageReadStatuses => Set<MessageReadStatus>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
