@@ -8,6 +8,8 @@ import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/booking_screen.dart';
 import '../../features/doctors/presentation/doctor_detail_screen.dart';
 import '../../features/doctors/presentation/doctor_list_screen.dart';
+import '../../features/payments/presentation/payment_confirmation_screen.dart';
+import '../../features/payments/presentation/payment_review_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 
 /// Route names are used (not raw path strings) everywhere a route is
@@ -22,6 +24,8 @@ abstract final class AppRoutes {
   static const home = 'home';
   static const doctorDetail = 'doctor-detail';
   static const booking = 'booking';
+  static const paymentReview = 'payment-review';
+  static const paymentConfirmation = 'payment-confirmation';
 }
 
 /// Deep links use the `asnan://` custom scheme (registered in
@@ -71,6 +75,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'book',
                 name: AppRoutes.booking,
                 builder: (context, state) => BookingScreen(doctorId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'review',
+                    name: AppRoutes.paymentReview,
+                    builder: (context, state) => PaymentReviewScreen(doctorId: state.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: 'confirmation',
+                    name: AppRoutes.paymentConfirmation,
+                    builder: (context, state) => PaymentConfirmationScreen(doctorId: state.pathParameters['id']!),
+                  ),
+                ],
               ),
             ],
           ),

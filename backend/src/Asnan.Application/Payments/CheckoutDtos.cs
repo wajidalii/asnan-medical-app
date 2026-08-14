@@ -1,3 +1,4 @@
+using Asnan.Domain.Enums;
 using FluentValidation;
 
 namespace Asnan.Application.Payments;
@@ -12,7 +13,12 @@ public class CreateCheckoutDtoValidator : AbstractValidator<CreateCheckoutDto>
     }
 }
 
-public record CheckoutDto(Guid AppointmentId, Guid PaymentTransactionId, string ProviderSessionId, string RedirectUrl, decimal Amount, string Currency);
+/// <summary>
+/// <see cref="Status"/> lets the Flutter confirmation screen (#22) poll this
+/// same idempotent endpoint to observe the appointment reaching Scheduled —
+/// never trusting a client-reported payment result, per ARCHITECTURE.md §8.
+/// </summary>
+public record CheckoutDto(Guid AppointmentId, Guid PaymentTransactionId, string ProviderSessionId, string RedirectUrl, decimal Amount, string Currency, AppointmentStatus Status);
 
 public enum CreateCheckoutStatus
 {
