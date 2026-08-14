@@ -1,4 +1,5 @@
 using System.Text;
+using Asnan.Api.BackgroundServices;
 using Asnan.Api.Middleware;
 using Asnan.Application;
 using Asnan.Infrastructure;
@@ -27,6 +28,7 @@ try
 
     builder.Services.AddApplication(builder.Configuration);
     builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
+    builder.Services.AddHostedService<ReminderBackgroundService>();
 
     builder.Services.AddControllers();
     builder.Services.AddFluentValidationAutoValidation();

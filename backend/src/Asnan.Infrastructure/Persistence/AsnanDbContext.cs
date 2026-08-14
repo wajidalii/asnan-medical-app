@@ -53,6 +53,8 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Refund> Refunds => Set<Refund>();
 
+    public DbSet<Reminder> Reminders => Set<Reminder>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
