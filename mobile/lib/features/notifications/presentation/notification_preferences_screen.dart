@@ -28,6 +28,13 @@ class _NotificationPreferencesScreenState extends ConsumerState<NotificationPref
     final state = ref.watch(notificationPreferencesControllerProvider);
     final controller = ref.read(notificationPreferencesControllerProvider.notifier);
 
+    ref.listen(notificationPreferencesControllerProvider, (previous, next) {
+      if (next.toggleFailure != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.toggleFailure!.message)));
+        controller.dismissToggleFailure();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Notification preferences')),
       body: _buildBody(context, state, controller),

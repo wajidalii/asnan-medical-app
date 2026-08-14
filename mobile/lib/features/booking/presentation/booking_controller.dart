@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/booking_repository.dart';
 import '../domain/availability_slot.dart';
+import '../domain/booking_failure.dart';
 import '../domain/booking_result.dart';
 import '../domain/doctor_availability.dart';
 import '../domain/hold.dart';
@@ -26,7 +27,7 @@ class BookingController extends FamilyNotifier<BookingState, String> {
   /// Called once from the screen's initState — same convention as
   /// AuthController.restoreSession() / DoctorListController.loadInitial().
   Future<void> loadDateStrip() async {
-    state = state.copyWith(isLoadingDateStrip: true);
+    state = state.copyWith(isLoadingDateStrip: true, dateStripFailure: null);
 
     final repo = ref.read(bookingRepositoryProvider);
     final today = DateTime.now();
@@ -34,12 +35,26 @@ class BookingController extends FamilyNotifier<BookingState, String> {
 
     final results = await Future.wait(dates.map((d) => repo.getAvailability(state.doctorId, d)));
 
+    // A per-date failure (e.g. offline) used to be silently mapped to
+    // "unavailable," making a network problem indistinguishable from a
+    // doctor who's genuinely booked solid. Surface it instead and offer a
+    // retry rather than showing a date strip that might be wrong.
+    BookingFailure? firstFailure;
+    for (final result in results) {
+      if (result case BookingError<DoctorAvailability>(:final failure)) {
+        firstFailure = failure;
+        break;
+      }
+    }
+
+    if (firstFailure != null) {
+      state = state.copyWith(isLoadingDateStrip: false, dateStripFailure: firstFailure);
+      return;
+    }
+
     final availability = <DateTime, bool>{};
     for (var i = 0; i < dates.length; i++) {
-      availability[dates[i]] = switch (results[i]) {
-        BookingSuccess<DoctorAvailability>(:final value) => value.slots.isNotEmpty,
-        BookingError<DoctorAvailability>() => false,
-      };
+      availability[dates[i]] = (results[i] as BookingSuccess<DoctorAvailability>).value.slots.isNotEmpty;
     }
 
     state = state.copyWith(dateAvailability: availability, isLoadingDateStrip: false);
@@ -61,6 +76,8 @@ class BookingController extends FamilyNotifier<BookingState, String> {
         state = state.copyWith(slots: const [], isLoadingSlots: false, slotsFailure: failure);
     }
   }
+
+  Future<void> retryDateStrip() => loadDateStrip();
 
   Future<void> retrySlots() async {
     final date = state.selectedDate;

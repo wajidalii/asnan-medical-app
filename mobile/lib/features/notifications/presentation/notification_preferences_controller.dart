@@ -33,8 +33,12 @@ class NotificationPreferencesController extends Notifier<NotificationPreferences
 
     final result = await ref.read(notificationsRepositoryProvider).setPreference(category, isEnabled);
     if (result is NotificationError) {
-      state = state.copyWith(preferences: previous);
+      state = state.copyWith(preferences: previous, toggleFailure: result.failure);
     }
+  }
+
+  void dismissToggleFailure() {
+    state = state.copyWith(preferences: state.preferences, failure: state.failure);
   }
 }
 

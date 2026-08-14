@@ -13,6 +13,7 @@ class BookingState {
     required this.doctorId,
     this.dateAvailability = const {},
     this.isLoadingDateStrip = true,
+    this.dateStripFailure,
     this.selectedDate,
     this.slots = const [],
     this.isLoadingSlots = false,
@@ -29,6 +30,7 @@ class BookingState {
   /// Date-only keys (year/month/day, local) -> whether that date has at least one slot.
   final Map<DateTime, bool> dateAvailability;
   final bool isLoadingDateStrip;
+  final BookingFailure? dateStripFailure;
 
   final DateTime? selectedDate;
   final List<AvailabilitySlot> slots;
@@ -44,6 +46,7 @@ class BookingState {
   BookingState copyWith({
     Map<DateTime, bool>? dateAvailability,
     bool? isLoadingDateStrip,
+    Object? dateStripFailure = _unset,
     Object? selectedDate = _unset,
     List<AvailabilitySlot>? slots,
     bool? isLoadingSlots,
@@ -58,6 +61,7 @@ class BookingState {
       doctorId: doctorId,
       dateAvailability: dateAvailability ?? this.dateAvailability,
       isLoadingDateStrip: isLoadingDateStrip ?? this.isLoadingDateStrip,
+      dateStripFailure: identical(dateStripFailure, _unset) ? this.dateStripFailure : dateStripFailure as BookingFailure?,
       selectedDate: identical(selectedDate, _unset) ? this.selectedDate : selectedDate as DateTime?,
       slots: slots ?? this.slots,
       isLoadingSlots: isLoadingSlots ?? this.isLoadingSlots,
