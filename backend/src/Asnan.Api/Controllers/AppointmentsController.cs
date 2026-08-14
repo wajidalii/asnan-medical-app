@@ -35,6 +35,21 @@ public class AppointmentsController : ControllerBase
         return Ok(await _appointmentService.ListAsync(User.GetUserId(), query, cancellationToken));
     }
 
+    /// <summary>Single-appointment lookup — issue #32's push-notification deep-link target.</summary>
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _appointmentService.GetByIdAsync(id, User.GetUserId(), User.IsInRole("Admin"), cancellationToken);
+
+        return result.Status switch
+        {
+            GetAppointmentStatus.Success => Ok(result.Appointment),
+            GetAppointmentStatus.AppointmentNotFound => NotFound(),
+            GetAppointmentStatus.Forbidden => Forbid(),
+            _ => throw new InvalidOperationException($"Unhandled {nameof(GetAppointmentStatus)}: {result.Status}"),
+        };
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, RequestCancelAppointmentDto dto, CancellationToken cancellationToken)
     {

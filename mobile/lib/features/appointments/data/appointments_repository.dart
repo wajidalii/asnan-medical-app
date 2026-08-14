@@ -18,6 +18,8 @@ class AppointmentsRepository {
   Future<AppointmentsResult<PagedResult<AppointmentSummary>>> list(AppointmentListScope scope, {int page = 1, int pageSize = 20}) =>
       _guard(() => _api.list(scope, page: page, pageSize: pageSize));
 
+  Future<AppointmentsResult<AppointmentSummary>> getById(String appointmentId) => _guard(() => _api.getById(appointmentId));
+
   Future<AppointmentsResult<CancellationPreview>> previewCancellation(String appointmentId) =>
       _guard(() => _api.previewCancellation(appointmentId));
 

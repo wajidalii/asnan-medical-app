@@ -12,4 +12,11 @@ public interface IAppointmentService
 
     /// <summary>Read-only — computes what CancelAsync would do right now without mutating anything.</summary>
     Task<PreviewCancellationResult> PreviewCancellationAsync(Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Single-appointment lookup — issue #32's deep-link target (a push
+    /// notification only carries an id, not the full summary the list
+    /// endpoint returns). Same object-level authorization as CancelAsync.
+    /// </summary>
+    Task<GetAppointmentResult> GetByIdAsync(Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken = default);
 }

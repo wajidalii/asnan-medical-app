@@ -67,6 +67,11 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Notification preferences',
+            onPressed: () => context.pushNamed(AppRoutes.notificationPreferences),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),

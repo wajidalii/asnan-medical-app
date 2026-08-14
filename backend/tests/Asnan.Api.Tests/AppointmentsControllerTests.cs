@@ -146,6 +146,50 @@ public class AppointmentsControllerTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task GetById_ByOwningPatient_ReturnsTheAppointment()
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(42));
+        var (doctorId, _) = await SeedDoctorWithScheduleAsync(date);
+        var slotStartUtc = new DateTime(date.Year, date.Month, date.Day, 9, 0, 0, DateTimeKind.Utc);
+        var (_, token) = await CreateUserTokenAsync("Patient");
+        var client = CreateClient(token);
+        var appointmentId = await BookAndScheduleAppointmentAsync(client, doctorId, slotStartUtc, slotStartUtc.AddMinutes(30));
+
+        var response = await client.GetAsync($"/api/v1/appointments/{appointmentId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<AppointmentSummaryDto>();
+        Assert.Equal(appointmentId, dto!.Id);
+        Assert.Equal(doctorId, dto.DoctorProfileId);
+        Assert.NotNull(dto.ChatConversationId);
+    }
+
+    [Fact]
+    public async Task GetById_ByNonParticipant_ReturnsForbidden()
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(43));
+        var (doctorId, _) = await SeedDoctorWithScheduleAsync(date);
+        var slotStartUtc = new DateTime(date.Year, date.Month, date.Day, 9, 0, 0, DateTimeKind.Utc);
+        var (_, ownerToken) = await CreateUserTokenAsync("Patient");
+        var (_, strangerToken) = await CreateUserTokenAsync("Patient");
+        var appointmentId = await BookAndScheduleAppointmentAsync(CreateClient(ownerToken), doctorId, slotStartUtc, slotStartUtc.AddMinutes(30));
+
+        var response = await CreateClient(strangerToken).GetAsync($"/api/v1/appointments/{appointmentId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_ForUnknownAppointment_ReturnsNotFound()
+    {
+        var (_, token) = await CreateUserTokenAsync("Patient");
+
+        var response = await CreateClient(token).GetAsync($"/api/v1/appointments/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task List_DoctorSeesTheirOwnAppointmentAsWell()
     {
         var date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(41));

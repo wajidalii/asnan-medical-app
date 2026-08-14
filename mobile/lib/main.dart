@@ -1,19 +1,92 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_controller.dart';
+import 'features/notifications/data/fcm_service.dart';
+import 'features/notifications/data/firebase_background_handler.dart';
+import 'features/notifications/data/firebase_fcm_service.dart';
+import 'features/notifications/presentation/deep_link_service.dart';
 
-void main() {
-  runApp(const ProviderScope(child: AsnanApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  FcmService? fcmService;
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    fcmService = FirebaseFcmService(FirebaseMessaging.instance);
+  } catch (_) {
+    // No Firebase project configured yet in this environment (see issue
+    // #71) — push notifications are unavailable, but the rest of the app
+    // must keep working. Every consumer treats a null FcmService as "push
+    // isn't available," never as a startup failure.
+  }
+
+  runApp(ProviderScope(
+    overrides: [fcmServiceProvider.overrideWithValue(fcmService)],
+    child: const AsnanApp(),
+  ));
 }
 
-class AsnanApp extends ConsumerWidget {
+class AsnanApp extends ConsumerStatefulWidget {
   const AsnanApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AsnanApp> createState() => _AsnanAppState();
+}
+
+class _AsnanAppState extends ConsumerState<AsnanApp> {
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  StreamSubscription? _foregroundSub;
+  StreamSubscription? _openedAppSub;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializePushHandling());
+  }
+
+  /// Foreground pushes get an in-app banner (no system notification is shown
+  /// automatically while the app is active); background/terminated taps
+  /// deep-link via DeepLinkService. getInitialMessage covers "app was fully
+  /// closed and launched by tapping a notification," onMessageOpenedApp
+  /// covers "app was merely backgrounded."
+  void _initializePushHandling() {
+    final fcm = ref.read(fcmServiceProvider);
+    if (fcm == null) return;
+
+    _foregroundSub = fcm.onForegroundMessage.listen((payload) {
+      final text = [payload.title, payload.body].nonNulls.join(' — ');
+      if (text.isEmpty) return;
+      _scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(text)));
+    });
+
+    _openedAppSub = fcm.onMessageOpenedApp.listen((payload) {
+      ref.read(deepLinkServiceProvider).handleAsync(payload.deepLink);
+    });
+
+    fcm.getInitialMessage().then((payload) {
+      if (payload != null) {
+        ref.read(deepLinkServiceProvider).handleAsync(payload.deepLink);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _foregroundSub?.cancel();
+    _openedAppSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
 
     // A session ending anywhere (explicit logout, or a background refresh
@@ -30,6 +103,7 @@ class AsnanApp extends ConsumerWidget {
       title: 'Asnan',
       theme: AppTheme.light,
       routerConfig: router,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
     );
   }
 }

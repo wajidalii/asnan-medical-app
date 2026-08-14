@@ -22,6 +22,12 @@ class AppointmentsApi {
     return PagedResult.fromJson(response.data!, AppointmentSummary.fromJson);
   }
 
+  /// Deep-link fetch (issue #32) — a push notification only carries an id, not the full summary the list endpoint returns.
+  Future<AppointmentSummary> getById(String appointmentId) async {
+    final response = await _dio.get<Map<String, dynamic>>('/appointments/$appointmentId');
+    return AppointmentSummary.fromJson(response.data!);
+  }
+
   Future<CancellationPreview> previewCancellation(String appointmentId) async {
     final response = await _dio.get<Map<String, dynamic>>('/appointments/$appointmentId/cancellation-preview');
     return CancellationPreview.fromJson(response.data!);
