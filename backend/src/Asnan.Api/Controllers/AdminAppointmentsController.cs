@@ -1,5 +1,6 @@
 using Asnan.Api.Extensions;
 using Asnan.Application.Payments;
+using Asnan.Domain.Enums;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,7 @@ public class AdminAppointmentsController : ControllerBase
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancelAppointmentDto dto, CancellationToken cancellationToken)
     {
-        var result = await _refundService.CancelAndRefundAsync(id, User.GetUserId(), dto, cancellationToken);
+        var result = await _refundService.CancelAndRefundAsync(id, AppointmentStatus.CancelledByAdmin, User.GetUserId(), dto, cancellationToken);
 
         return result.Status switch
         {

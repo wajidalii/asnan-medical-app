@@ -1,4 +1,5 @@
 using System.Reflection;
+using Asnan.Application.Appointments;
 using Asnan.Application.Auth;
 using Asnan.Application.Availability;
 using Asnan.Application.Doctors;
@@ -39,6 +40,9 @@ public static class DependencyInjection
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IRefundService, RefundService>();
+
+        services.Configure<CancellationPolicyOptions>(configuration.GetSection(CancellationPolicyOptions.SectionName));
+        services.AddScoped<IAppointmentService, AppointmentService>();
 
         return services;
     }
