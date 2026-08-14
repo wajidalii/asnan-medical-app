@@ -1,6 +1,7 @@
 using Asnan.Application.Otps;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Asnan.Api.Controllers;
 
@@ -13,6 +14,7 @@ namespace Asnan.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/otp")]
+[EnableRateLimiting("otp")]
 public class OtpController : ControllerBase
 {
     private readonly IOtpService _otpService;

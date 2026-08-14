@@ -3,6 +3,7 @@ using Asnan.Application.Payments;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Asnan.Api.Controllers;
 
@@ -40,6 +41,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPost("webhook")]
+    [EnableRateLimiting("webhook")]
     public async Task<IActionResult> Webhook(CancellationToken cancellationToken)
     {
         Request.EnableBuffering();

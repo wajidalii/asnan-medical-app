@@ -27,7 +27,7 @@ public class SignupServiceTests
         }
     }
 
-    private static (AsnanDbContext Db, FakeOtpSender Sender, SignupService Signup) CreateService()
+    private static (AsnanDbContext Db, FakeOtpSender Sender, SignupService Signup) CreateService(RecordingAuditLogger? auditLogger = null)
     {
         var options = new DbContextOptionsBuilder<AsnanDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -45,7 +45,7 @@ public class SignupServiceTests
         });
         var sender = new FakeOtpSender();
         var otpService = new OtpService(db, sender, otpOptions);
-        var signupService = new SignupService(db, otpService, new Pbkdf2PasswordHasher());
+        var signupService = new SignupService(db, otpService, new Pbkdf2PasswordHasher(), auditLogger ?? new RecordingAuditLogger());
 
         return (db, sender, signupService);
     }
@@ -75,6 +75,24 @@ public class SignupServiceTests
 
         var role = await db.UserRoles.SingleAsync(ur => ur.UserId == user.Id);
         Assert.Equal(RoleIds.Patient, role.RoleId);
+    }
+
+    [Fact]
+    public async Task SetPasswordAsync_Success_RecordsAnAuditLogEntry()
+    {
+        var auditLogger = new RecordingAuditLogger();
+        var (_, sender, signup) = CreateService(auditLogger);
+        const string destination = "audited-patient@test.local";
+
+        await signup.RequestOtpAsync(destination, OtpChannel.Email);
+        var code = sender.Sent[0].Code;
+        var verify = await signup.VerifyOtpAsync(destination, code, OtpChannel.Email);
+
+        var result = await signup.SetPasswordAsync(verify.SignupToken!, "correct horse battery staple");
+
+        var entry = Assert.Single(auditLogger.Entries);
+        Assert.Equal(result.UserId, entry.UserId);
+        Assert.Equal("PasswordSet", entry.EventType);
     }
 
     [Fact]

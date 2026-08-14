@@ -1,3 +1,4 @@
+using Asnan.Application.Auditing;
 using Asnan.Application.Common;
 using Asnan.Application.Otps;
 using Asnan.Domain.Entities;
@@ -13,12 +14,14 @@ public class SignupService : ISignupService
     private readonly IApplicationDbContext _db;
     private readonly IOtpService _otpService;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IAuditLogger _auditLogger;
 
-    public SignupService(IApplicationDbContext db, IOtpService otpService, IPasswordHasher passwordHasher)
+    public SignupService(IApplicationDbContext db, IOtpService otpService, IPasswordHasher passwordHasher, IAuditLogger auditLogger)
     {
         _db = db;
         _otpService = otpService;
         _passwordHasher = passwordHasher;
+        _auditLogger = auditLogger;
     }
 
     public Task<OtpRequestResult> RequestOtpAsync(string destination, OtpChannel channel, CancellationToken cancellationToken = default) =>
@@ -87,6 +90,8 @@ public class SignupService : ISignupService
         _db.Users.Add(user);
         _db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = RoleIds.Patient });
         token.ConsumedAtUtc = now;
+
+        _auditLogger.Record(user.Id, "PasswordSet", "Initial password set during signup.");
 
         await _db.SaveChangesAsync(cancellationToken);
 

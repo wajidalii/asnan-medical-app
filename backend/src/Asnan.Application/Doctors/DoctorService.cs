@@ -1,3 +1,4 @@
+using Asnan.Application.Auditing;
 using Asnan.Application.Common;
 using Asnan.Application.Specialties;
 using Asnan.Domain.Entities;
@@ -8,10 +9,12 @@ namespace Asnan.Application.Doctors;
 public class DoctorService : IDoctorService
 {
     private readonly IApplicationDbContext _db;
+    private readonly IAuditLogger _auditLogger;
 
-    public DoctorService(IApplicationDbContext db)
+    public DoctorService(IApplicationDbContext db, IAuditLogger auditLogger)
     {
         _db = db;
+        _auditLogger = auditLogger;
     }
 
     public async Task<List<DoctorProfileDto>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -33,7 +36,7 @@ public class DoctorService : IDoctorService
         return doctor is null ? null : ToDto(doctor);
     }
 
-    public async Task<DoctorMutationResult> CreateAsync(CreateDoctorDto dto, CancellationToken cancellationToken = default)
+    public async Task<DoctorMutationResult> CreateAsync(CreateDoctorDto dto, Guid adminUserId, CancellationToken cancellationToken = default)
     {
         var user = await _db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Id == dto.UserId, cancellationToken);
         if (user is null)
@@ -77,12 +80,15 @@ public class DoctorService : IDoctorService
         doctor.DoctorSpecialties = specialties.Select(s => new DoctorSpecialty { DoctorProfile = doctor, SpecialtyId = s.Id, Specialty = s }).ToList();
 
         _db.DoctorProfiles.Add(doctor);
+
+        _auditLogger.Record(adminUserId, "AdminDoctorProfileCreated", $"doctorProfileId={doctor.Id};targetUserId={dto.UserId}");
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return new DoctorMutationResult(DoctorMutationStatus.Success, ToDto(doctor));
     }
 
-    public async Task<DoctorMutationResult> UpdateAsync(Guid id, UpdateDoctorDto dto, CancellationToken cancellationToken = default)
+    public async Task<DoctorMutationResult> UpdateAsync(Guid id, UpdateDoctorDto dto, Guid adminUserId, CancellationToken cancellationToken = default)
     {
         var doctor = await _db.DoctorProfiles
             .Include(d => d.DoctorSpecialties).ThenInclude(ds => ds.Specialty)
@@ -116,12 +122,14 @@ public class DoctorService : IDoctorService
             doctor.DoctorSpecialties.Add(new DoctorSpecialty { DoctorProfileId = doctor.Id, SpecialtyId = specialty.Id, Specialty = specialty });
         }
 
+        _auditLogger.Record(adminUserId, "AdminDoctorProfileUpdated", $"doctorProfileId={doctor.Id}");
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return new DoctorMutationResult(DoctorMutationStatus.Success, ToDto(doctor));
     }
 
-    public async Task<DoctorMutationResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<DoctorMutationResult> DeleteAsync(Guid id, Guid adminUserId, CancellationToken cancellationToken = default)
     {
         var doctor = await _db.DoctorProfiles.FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         if (doctor is null)
@@ -130,6 +138,9 @@ public class DoctorService : IDoctorService
         }
 
         doctor.DeletedAtUtc = DateTime.UtcNow;
+
+        _auditLogger.Record(adminUserId, "AdminDoctorProfileDeleted", $"doctorProfileId={doctor.Id}");
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return new DoctorMutationResult(DoctorMutationStatus.Success);

@@ -1,3 +1,4 @@
+using Asnan.Application.Auditing;
 using Asnan.Application.Common;
 using Asnan.Application.Notifications;
 using Asnan.Domain.Entities;
@@ -11,12 +12,14 @@ public class RefundService : IRefundService
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProvider _paymentProvider;
     private readonly INotificationDispatchService _notificationDispatch;
+    private readonly IAuditLogger _auditLogger;
 
-    public RefundService(IApplicationDbContext db, IPaymentProvider paymentProvider, INotificationDispatchService notificationDispatch)
+    public RefundService(IApplicationDbContext db, IPaymentProvider paymentProvider, INotificationDispatchService notificationDispatch, IAuditLogger auditLogger)
     {
         _db = db;
         _paymentProvider = paymentProvider;
         _notificationDispatch = notificationDispatch;
+        _auditLogger = auditLogger;
     }
 
     public async Task<CancelAndRefundResult> CancelAndRefundAsync(Guid appointmentId, AppointmentStatus cancelledByStatus, Guid initiatedByUserId, CancelAppointmentDto dto, CancellationToken cancellationToken = default)
@@ -35,6 +38,12 @@ public class RefundService : IRefundService
         var now = DateTime.UtcNow;
         var cancelHistory = AppointmentStateMachine.Cancel(appointment, cancelledByStatus, initiatedByUserId, dto.Reason, now);
         _db.AppointmentStatusHistories.Add(cancelHistory);
+
+        // Distinguishing the event type (rather than always "AppointmentCancelled")
+        // is what makes this also satisfy ARCHITECTURE.md §13's "admin actions"
+        // audit category, without a second, separate log call.
+        var cancelEventType = cancelledByStatus == AppointmentStatus.CancelledByAdmin ? "AdminCancelledAppointment" : "AppointmentCancelled";
+        _auditLogger.Record(initiatedByUserId, cancelEventType, $"appointmentId={appointment.Id}");
 
         var transaction = await _db.PaymentTransactions
             .FirstOrDefaultAsync(t => t.AppointmentId == appointment.Id && t.Status == PaymentTransactionStatus.Succeeded, cancellationToken);
@@ -78,6 +87,11 @@ public class RefundService : IRefundService
             refund.FailureReason = providerResult.FailureReason;
             // Appointment stays RefundPending — a valid, non-terminal state; a human/ops retry is needed.
         }
+
+        _auditLogger.Record(
+            initiatedByUserId,
+            refund.Status == RefundStatus.Succeeded ? "RefundIssued" : "RefundFailed",
+            $"refundId={refund.Id};appointmentId={appointment.Id};amount={refund.Currency} {refund.Amount}");
 
         await _db.SaveChangesAsync(cancellationToken);
 
