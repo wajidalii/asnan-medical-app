@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Asnan uses your calendar only to add an event for an appointment when you tap "Add to Calendar" — nothing is read or synced automatically.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Asnan uses your calendar only to add an event for an appointment when you tap "Add to Calendar" — nothing is read or synced automatically.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Asnan adds an event to your calendar only when you tap "Add to Calendar" on an appointment.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

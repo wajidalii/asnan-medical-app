@@ -90,10 +90,77 @@ public class AppointmentService : IAppointmentService
 
     public async Task<CancelAppointmentResult> CancelAsync(Guid appointmentId, Guid callerId, bool callerIsAdmin, RequestCancelAppointmentDto dto, CancellationToken cancellationToken = default)
     {
+        var (appointment, cancelledByStatus, error) = await AuthorizeAsync(appointmentId, callerId, callerIsAdmin, cancellationToken);
+        if (error is not null)
+        {
+            return new CancelAppointmentResult(error.Value);
+        }
+
+        int refundPercentage;
+        if (callerIsAdmin)
+        {
+            // An admin override bypasses the cancellation window entirely — full refund by default.
+            refundPercentage = 100;
+        }
+        else
+        {
+            var policyResult = CancellationPolicy.Evaluate(DateTime.UtcNow, appointment!.SlotStartUtc, _policyOptions.RefundTiers);
+            if (!policyResult.IsAllowed)
+            {
+                return new CancelAppointmentResult(CancelAppointmentStatus.CancellationWindowClosed);
+            }
+
+            refundPercentage = policyResult.RefundPercentage;
+        }
+
+        var refundResult = await _refundService.CancelAndRefundAsync(
+            appointmentId,
+            cancelledByStatus!.Value,
+            callerId,
+            new CancelAppointmentDto(dto.Reason, refundPercentage),
+            cancellationToken);
+
+        // CancelAndRefundAsync only returns AppointmentNotFound/NotCancellable for states already
+        // ruled out above, so Success is the only remaining outcome in practice.
+        return new CancelAppointmentResult(CancelAppointmentStatus.Success, refundResult.Result);
+    }
+
+    public async Task<PreviewCancellationResult> PreviewCancellationAsync(Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken = default)
+    {
+        var (appointment, _, error) = await AuthorizeAsync(appointmentId, callerId, callerIsAdmin, cancellationToken);
+        if (error is not null)
+        {
+            return new PreviewCancellationResult(error.Value);
+        }
+
+        bool isAllowed;
+        int refundPercentage;
+        if (callerIsAdmin)
+        {
+            isAllowed = true;
+            refundPercentage = 100;
+        }
+        else
+        {
+            var policyResult = CancellationPolicy.Evaluate(DateTime.UtcNow, appointment!.SlotStartUtc, _policyOptions.RefundTiers);
+            isAllowed = policyResult.IsAllowed;
+            refundPercentage = policyResult.RefundPercentage;
+        }
+
+        var refundAmount = Math.Round(appointment!.ConsultationFee * refundPercentage / 100m, 2);
+        return new PreviewCancellationResult(
+            CancelAppointmentStatus.Success,
+            new CancellationPreviewDto(appointment.Id, isAllowed, refundPercentage, refundAmount, appointment.Currency));
+    }
+
+    /// <summary>Shared load + object-level-authorization + cancellability check for CancelAsync/PreviewCancellationAsync.</summary>
+    private async Task<(Appointment? Appointment, AppointmentStatus? CancelledByStatus, CancelAppointmentStatus? Error)> AuthorizeAsync(
+        Guid appointmentId, Guid callerId, bool callerIsAdmin, CancellationToken cancellationToken)
+    {
         var appointment = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == appointmentId, cancellationToken);
         if (appointment is null)
         {
-            return new CancelAppointmentResult(CancelAppointmentStatus.AppointmentNotFound);
+            return (null, null, CancelAppointmentStatus.AppointmentNotFound);
         }
 
         var doctor = await _db.DoctorProfiles.FirstAsync(d => d.Id == appointment.DoctorProfileId, cancellationToken);
@@ -113,40 +180,14 @@ public class AppointmentService : IAppointmentService
         }
         else
         {
-            return new CancelAppointmentResult(CancelAppointmentStatus.Forbidden);
+            return (null, null, CancelAppointmentStatus.Forbidden);
         }
 
         if (appointment.Status != AppointmentStatus.Scheduled)
         {
-            return new CancelAppointmentResult(CancelAppointmentStatus.NotCancellable);
+            return (null, null, CancelAppointmentStatus.NotCancellable);
         }
 
-        int refundPercentage;
-        if (callerIsAdmin)
-        {
-            // An admin override bypasses the cancellation window entirely — full refund by default.
-            refundPercentage = 100;
-        }
-        else
-        {
-            var policyResult = CancellationPolicy.Evaluate(DateTime.UtcNow, appointment.SlotStartUtc, _policyOptions.RefundTiers);
-            if (!policyResult.IsAllowed)
-            {
-                return new CancelAppointmentResult(CancelAppointmentStatus.CancellationWindowClosed);
-            }
-
-            refundPercentage = policyResult.RefundPercentage;
-        }
-
-        var refundResult = await _refundService.CancelAndRefundAsync(
-            appointmentId,
-            cancelledByStatus,
-            callerId,
-            new CancelAppointmentDto(dto.Reason, refundPercentage),
-            cancellationToken);
-
-        // CancelAndRefundAsync only returns AppointmentNotFound/NotCancellable for states already
-        // ruled out above, so Success is the only remaining outcome in practice.
-        return new CancelAppointmentResult(CancelAppointmentStatus.Success, refundResult.Result);
+        return (appointment, cancelledByStatus, null);
     }
 }

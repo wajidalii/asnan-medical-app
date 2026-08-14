@@ -53,3 +53,15 @@ public enum CancelAppointmentStatus
 }
 
 public record CancelAppointmentResult(CancelAppointmentStatus Status, Payments.AppointmentCancellationDto? Result = null);
+
+/// <summary>
+/// Read-only preview of what cancelling right now would do — mobile (#26)
+/// shows this before the user confirms, per "Cancellation flow shows the
+/// applicable refund policy before confirming". <see cref="IsAllowed"/>
+/// false is a normal, non-error preview outcome (the window has closed),
+/// distinct from <see cref="CancelAppointmentStatus.CancellationWindowClosed"/>
+/// which is what the actual (mutating) cancel action returns if attempted anyway.
+/// </summary>
+public record CancellationPreviewDto(Guid AppointmentId, bool IsAllowed, int RefundPercentage, decimal RefundAmount, string Currency);
+
+public record PreviewCancellationResult(CancelAppointmentStatus Status, CancellationPreviewDto? Preview = null);
