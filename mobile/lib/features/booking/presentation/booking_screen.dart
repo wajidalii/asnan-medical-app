@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import 'booking_controller.dart';
 import 'booking_state.dart';
 
@@ -213,6 +215,11 @@ class _HoldConfirmation extends StatelessWidget {
               style: textTheme.displaySmall,
             ),
             const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => context.pushNamed(AppRoutes.paymentReview, pathParameters: {'id': state.doctorId}),
+              child: const Text('Proceed to Payment'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton(onPressed: controller.abandonHold, child: const Text('Cancel hold')),
           ],
         ),

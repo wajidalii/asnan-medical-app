@@ -151,8 +151,9 @@ public class PaymentsControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         var checkout = await (await client.PostAsJsonAsync("/api/v1/payments/checkout", new CreateCheckoutDto(holdToken))).Content.ReadFromJsonAsync<CheckoutDto>();
         Assert.NotNull(checkout);
+        Assert.Equal(AppointmentStatus.PaymentPending, checkout!.Status);
 
-        var confirmResponse = await client.PostAsJsonAsync(checkout!.RedirectUrl, new { Succeeded = true, FailureReason = (string?)null });
+        var confirmResponse = await client.PostAsJsonAsync(checkout.RedirectUrl, new { Succeeded = true, FailureReason = (string?)null });
         confirmResponse.EnsureSuccessStatusCode();
         var delivery = await confirmResponse.Content.ReadFromJsonAsync<MockWebhookDelivery>();
 
@@ -171,6 +172,10 @@ public class PaymentsControllerTests : IClassFixture<WebApplicationFactory<Progr
 
         var transaction = await db.PaymentTransactions.FirstAsync(t => t.AppointmentId == appointment.Id);
         Assert.Equal(PaymentTransactionStatus.Succeeded, transaction.Status);
+
+        // The mobile confirmation screen (#22) polls this same idempotent endpoint to observe Scheduled.
+        var polled = await (await client.PostAsJsonAsync("/api/v1/payments/checkout", new CreateCheckoutDto(holdToken))).Content.ReadFromJsonAsync<CheckoutDto>();
+        Assert.Equal(AppointmentStatus.Scheduled, polled!.Status);
 
         var hold = await db.AppointmentHolds.FirstAsync(h => h.PatientUserId == patientId);
         Assert.Equal(HoldStatus.Consumed, hold.Status);

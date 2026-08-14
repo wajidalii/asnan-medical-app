@@ -195,5 +195,5 @@ public class PaymentService : IPaymentService
     }
 
     private static CheckoutDto ToCheckoutDto(Appointment appointment, PaymentTransaction transaction) =>
-        new(appointment.Id, transaction.Id, transaction.ProviderSessionId, transaction.RedirectUrl, transaction.Amount, transaction.Currency);
+        new(appointment.Id, transaction.Id, transaction.ProviderSessionId, transaction.RedirectUrl, transaction.Amount, transaction.Currency, appointment.Status);
 }
