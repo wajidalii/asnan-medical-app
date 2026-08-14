@@ -51,6 +51,8 @@ public class AsnanDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ChatParticipant> ChatParticipants => Set<ChatParticipant>();
 
+    public DbSet<Refund> Refunds => Set<Refund>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -48,6 +48,8 @@ public interface IApplicationDbContext
 
     DbSet<ChatParticipant> ChatParticipants { get; }
 
+    DbSet<Refund> Refunds { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a
