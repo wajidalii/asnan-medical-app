@@ -16,7 +16,7 @@ public class RefundService : IRefundService
         _paymentProvider = paymentProvider;
     }
 
-    public async Task<CancelAndRefundResult> CancelAndRefundAsync(Guid appointmentId, Guid initiatedByUserId, CancelAppointmentDto dto, CancellationToken cancellationToken = default)
+    public async Task<CancelAndRefundResult> CancelAndRefundAsync(Guid appointmentId, AppointmentStatus cancelledByStatus, Guid initiatedByUserId, CancelAppointmentDto dto, CancellationToken cancellationToken = default)
     {
         var appointment = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == appointmentId, cancellationToken);
         if (appointment is null)
@@ -30,7 +30,7 @@ public class RefundService : IRefundService
         }
 
         var now = DateTime.UtcNow;
-        var cancelHistory = AppointmentStateMachine.Cancel(appointment, AppointmentStatus.CancelledByAdmin, initiatedByUserId, dto.Reason, now);
+        var cancelHistory = AppointmentStateMachine.Cancel(appointment, cancelledByStatus, initiatedByUserId, dto.Reason, now);
         _db.AppointmentStatusHistories.Add(cancelHistory);
 
         var transaction = await _db.PaymentTransactions
