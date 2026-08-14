@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../calendar/calendar_event_data.dart';
 import '../../calendar/calendar_service.dart';
 import '../../calendar/calendar_write_result.dart';
@@ -75,10 +77,6 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
       CalendarWriteStatus.failure => 'Could not add to your calendar. Please try again.',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$feature is coming soon.')));
   }
 
   Future<void> _showCancellationDialog(CancellationPreview preview) async {
@@ -167,7 +165,13 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
             OutlinedButton.icon(
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Message Doctor'),
-              onPressed: () => _showComingSoon('Chat'),
+              onPressed: appointment.chatConversationId == null
+                  ? null
+                  : () => context.pushNamed(
+                        AppRoutes.chat,
+                        pathParameters: {'conversationId': appointment.chatConversationId!},
+                        extra: appointment.doctorFullName,
+                      ),
             ),
             const SizedBox(height: 12),
           ],

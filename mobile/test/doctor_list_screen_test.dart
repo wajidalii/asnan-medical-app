@@ -76,6 +76,8 @@ void main() {
   testWidgets('renders doctors returned by the search API', (tester) async {
     final adapter = _StubHttpClientAdapter((options) async {
       if (options.path == '/specialties') return _json([]);
+      // The AppBar's unread badge (#29) also fetches appointment lists — irrelevant to these doctor-search assertions.
+      if (options.path == '/appointments') return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
       return _json({
         'items': [_doctorJson(id: '1', name: 'Dr. Alice Example')],
         'page': 1,
@@ -93,6 +95,8 @@ void main() {
   testWidgets('shows an empty state when no doctors match', (tester) async {
     final adapter = _StubHttpClientAdapter((options) async {
       if (options.path == '/specialties') return _json([]);
+      // The AppBar's unread badge (#29) also fetches appointment lists — irrelevant to these doctor-search assertions.
+      if (options.path == '/appointments') return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
       return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
     });
 
@@ -105,6 +109,8 @@ void main() {
   testWidgets('shows an error state with a retry button on failure', (tester) async {
     final adapter = _StubHttpClientAdapter((options) async {
       if (options.path == '/specialties') return _json([]);
+      // The AppBar's unread badge (#29) also fetches appointment lists — irrelevant to these doctor-search assertions.
+      if (options.path == '/appointments') return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
       throw DioException(
         requestOptions: options,
         type: DioExceptionType.badResponse,
@@ -127,6 +133,8 @@ void main() {
     var callCount = 0;
     final adapter = _StubHttpClientAdapter((options) async {
       if (options.path == '/specialties') return _json([]);
+      // The AppBar's unread badge (#29) also fetches appointment lists — irrelevant to these doctor-search assertions.
+      if (options.path == '/appointments') return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
       callCount++;
       if (callCount == 1) {
         throw DioException(
@@ -160,6 +168,7 @@ void main() {
           {'id': 'spec-1', 'name': 'Cardiology', 'description': null},
         ]);
       }
+      if (options.path == '/appointments') return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});
       final raw = options.queryParameters['specialtyIds'];
       requestedSpecialtyIds.add(raw == null ? const [] : List<String>.from(raw as List));
       return _json({'items': [], 'page': 1, 'pageSize': 20, 'totalCount': 0});

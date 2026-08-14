@@ -9,6 +9,7 @@ import '../../features/auth/presentation/signup_otp_screen.dart';
 import '../../features/auth/presentation/signup_password_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/booking_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/doctors/presentation/doctor_detail_screen.dart';
 import '../../features/doctors/presentation/doctor_list_screen.dart';
 import '../../features/payments/presentation/payment_confirmation_screen.dart';
@@ -31,6 +32,7 @@ abstract final class AppRoutes {
   static const paymentConfirmation = 'payment-confirmation';
   static const appointments = 'appointments';
   static const appointmentDetails = 'appointment-details';
+  static const chat = 'chat';
 }
 
 /// Deep links use the `asnan://` custom scheme (registered in
@@ -108,6 +110,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 // param + a second GET — no single-appointment read
                 // endpoint exists server-side, deliberately (see #24/#26).
                 builder: (context, state) => AppointmentDetailsScreen(appointment: state.extra! as AppointmentSummary),
+                routes: [
+                  GoRoute(
+                    path: 'chat/:conversationId',
+                    name: AppRoutes.chat,
+                    builder: (context, state) => ChatScreen(
+                      conversationId: state.pathParameters['conversationId']!,
+                      title: state.extra! as String,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

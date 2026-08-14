@@ -13,6 +13,7 @@ class AppointmentSummary {
     required this.status,
     required this.consultationFee,
     required this.currency,
+    this.chatConversationId,
   });
 
   final String id;
@@ -24,6 +25,10 @@ class AppointmentSummary {
   final double consultationFee;
   final String currency;
 
+  /// Null until the appointment has reached (or passed through) Scheduled — a
+  /// ChatConversation is only ever created at that point (backend #20).
+  final String? chatConversationId;
+
   AppointmentSummary copyWith({AppointmentPaymentStatus? status}) => AppointmentSummary(
         id: id,
         doctorProfileId: doctorProfileId,
@@ -33,6 +38,7 @@ class AppointmentSummary {
         status: status ?? this.status,
         consultationFee: consultationFee,
         currency: currency,
+        chatConversationId: chatConversationId,
       );
 
   factory AppointmentSummary.fromJson(Map<String, dynamic> json) => AppointmentSummary(
@@ -44,5 +50,6 @@ class AppointmentSummary {
         status: AppointmentPaymentStatus.fromValue(json['status'] as int),
         consultationFee: (json['consultationFee'] as num).toDouble(),
         currency: json['currency'] as String,
+        chatConversationId: json['chatConversationId'] as String?,
       );
 }

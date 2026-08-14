@@ -11,6 +11,12 @@ public enum AppointmentListScope
 
 public record AppointmentListQuery(AppointmentListScope Scope = AppointmentListScope.Upcoming, int Page = 1, int PageSize = 20);
 
+/// <summary>
+/// <see cref="ChatConversationId"/> is null until the appointment has
+/// reached (or passed through) Scheduled — a ChatConversation is only ever
+/// created at that point (#20) — and is the entry point the mobile chat
+/// feature (#29) navigates into from the appointment details screen.
+/// </summary>
 public record AppointmentSummaryDto(
     Guid Id,
     Guid DoctorProfileId,
@@ -19,7 +25,8 @@ public record AppointmentSummaryDto(
     DateTime SlotEndUtc,
     AppointmentStatus Status,
     decimal ConsultationFee,
-    string Currency);
+    string Currency,
+    Guid? ChatConversationId);
 
 /// <summary>
 /// No refund-percentage field, deliberately: unlike the admin endpoint's
