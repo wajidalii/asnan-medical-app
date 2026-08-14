@@ -3,6 +3,7 @@ using Asnan.Application.Auth;
 using Asnan.Application.Availability;
 using Asnan.Application.Doctors;
 using Asnan.Application.Otps;
+using Asnan.Application.Payments;
 using Asnan.Application.Specialties;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
@@ -34,6 +35,8 @@ public static class DependencyInjection
 
         services.Configure<HoldOptions>(configuration.GetSection(HoldOptions.SectionName));
         services.AddScoped<IAppointmentHoldService, AppointmentHoldService>();
+
+        services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
 
         return services;
     }

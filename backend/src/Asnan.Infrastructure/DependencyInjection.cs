@@ -1,8 +1,10 @@
 using Asnan.Application.Auth;
 using Asnan.Application.Common;
 using Asnan.Application.Otps;
+using Asnan.Application.Payments;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Otps;
+using Asnan.Infrastructure.Payments;
 using Asnan.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AsnanDbContext>());
 
         AddOtpProviders(services, configuration, isDevelopment);
+        AddPaymentProvider(services, configuration, isDevelopment);
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -50,6 +53,21 @@ public static class DependencyInjection
         services.AddScoped<ISmsOtpSender, MockSmsOtpSender>();
 
         services.AddScoped<IOtpSender, CompositeOtpSender>();
+    }
+
+    private static void AddPaymentProvider(IServiceCollection services, IConfiguration configuration, bool isDevelopment)
+    {
+        var provider = configuration["Payment:Provider"] ?? "Mock";
+
+        RequireDevelopmentIfMock(provider, "Payment:Provider", isDevelopment);
+
+        // Only "Mock" exists today; a real provider (Stripe is the leading
+        // candidate) registers here behind the same IPaymentProvider once
+        // credentials exist — see issue #60.
+        services.AddSingleton<MockPaymentProviderStore>();
+        services.AddScoped<MockPaymentProvider>();
+        services.AddScoped<IPaymentProvider>(sp => sp.GetRequiredService<MockPaymentProvider>());
+        services.AddScoped<IMockPaymentProviderConfirmation>(sp => sp.GetRequiredService<MockPaymentProvider>());
     }
 
     private static void RequireDevelopmentIfMock(string provider, string configKey, bool isDevelopment)
