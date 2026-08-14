@@ -83,10 +83,27 @@ class _SlotSelection extends StatelessWidget {
           ),
         if (state.isLoadingDateStrip)
           const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
-        else
+        else if (state.dateStripFailure != null)
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(state.dateStripFailure!.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: controller.retryDateStrip, child: const Text('Retry')),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else ...[
           _DateStrip(state: state, controller: controller),
-        const Divider(height: 1),
-        Expanded(child: _SlotList(state: state, controller: controller)),
+          const Divider(height: 1),
+          Expanded(child: _SlotList(state: state, controller: controller)),
+        ],
       ],
     );
   }

@@ -128,7 +128,7 @@ void main() {
     expect(remindersSwitch.value, isFalse);
   });
 
-  testWidgets('a failed toggle reverts to the previous state', (tester) async {
+  testWidgets('a failed toggle reverts to the previous state and shows why', (tester) async {
     final adapter = _StubHttpClientAdapter((options) async {
       if (options.path == '/notifications/preferences') {
         return _json(_preferencesJson());
@@ -136,7 +136,7 @@ void main() {
       throw DioException(
         requestOptions: options,
         type: DioExceptionType.badResponse,
-        response: Response(requestOptions: options, statusCode: 500, data: {'title': 'Something went wrong.'}),
+        response: Response(requestOptions: options, statusCode: 500, data: {'title': "Couldn't save that. Please try again."}),
       );
     });
 
@@ -148,6 +148,21 @@ void main() {
 
     final remindersSwitch = tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Appointment reminders'));
     expect(remindersSwitch.value, isTrue); // reverted
+    expect(find.text("Couldn't save that. Please try again."), findsOneWidget);
+  });
+
+  testWidgets('shows a loading spinner while preferences are being fetched', (tester) async {
+    final adapter = _StubHttpClientAdapter((options) async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return _json(_preferencesJson());
+    });
+
+    await tester.pumpWidget(_wrap(adapter));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    await tester.pumpAndSettle();
   });
 
   testWidgets('shows an error state with a retry button on load failure', (tester) async {

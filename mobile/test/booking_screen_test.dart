@@ -164,4 +164,99 @@ void main() {
     expect(find.text('Slot held'), findsNothing);
     expect(find.text('Your hold has expired. Please pick another slot.'), findsOneWidget);
   });
+
+  testWidgets('the date strip shows a loading spinner while it loads', (tester) async {
+    final adapter = _StubHttpClientAdapter((options) async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return _json(_availabilityWithOneSlot());
+    });
+
+    await tester.pumpWidget(_wrap(adapter));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a date-strip load failure (e.g. offline) shows an error with retry, not a silently-empty strip', (tester) async {
+    var shouldFail = true;
+    final adapter = _StubHttpClientAdapter((options) async {
+      if (shouldFail) {
+        throw DioException(requestOptions: options, type: DioExceptionType.connectionError);
+      }
+      return _json(_availabilityWithOneSlot());
+    });
+
+    await tester.pumpWidget(_wrap(adapter));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Network error. Please check your connection and try again.'), findsOneWidget);
+    expect(find.byType(OutlinedButton), findsNothing);
+
+    shouldFail = false;
+    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Network error. Please check your connection and try again.'), findsNothing);
+    expect(find.byType(OutlinedButton), findsWidgets);
+  });
+
+  testWidgets('no available slots for the selected date shows an empty message', (tester) async {
+    final adapter = _StubHttpClientAdapter((options) async {
+      return _json({'doctorId': 'doctor-1', 'timeZoneId': 'UTC', 'date': '2026-09-01', 'slots': []});
+    });
+
+    await tester.pumpWidget(_wrap(adapter));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No available slots for this date.'), findsOneWidget);
+  });
+
+  testWidgets('selecting a different date that fails to load shows an error banner with a retry that reloads it', (tester) async {
+    final today = DateTime.now();
+    String formatDate(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final day1 = formatDate(DateTime(today.year, today.month, today.day + 1));
+
+    var day1RequestCount = 0;
+    var day1ShouldFail = true;
+    final adapter = _StubHttpClientAdapter((options) async {
+      final date = options.uri.queryParameters['date'];
+      if (date == day1) {
+        day1RequestCount++;
+        // The first request for day1 is the date strip's own availability
+        // probe (must succeed so its chip is tappable); only the explicit
+        // selectDate() triggered by tapping that chip fails, until retried.
+        if (day1RequestCount > 1 && day1ShouldFail) {
+          throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.badResponse,
+            response: Response(requestOptions: options, statusCode: 500, data: {'title': 'Something went wrong. Please try again.'}),
+          );
+        }
+      }
+      return _json(_availabilityWithOneSlot());
+    });
+
+    await tester.pumpWidget(_wrap(adapter));
+    await tester.pumpAndSettle();
+    expect(find.text(_formatDateLabel(DateTime(today.year, today.month, today.day + 1))), findsOneWidget);
+
+    await tester.tap(find.text(_formatDateLabel(DateTime(today.year, today.month, today.day + 1))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+
+    day1ShouldFail = false;
+    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Something went wrong. Please try again.'), findsNothing);
+    expect(find.byType(OutlinedButton), findsWidgets);
+  });
 }
+
+const _weekdayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+String _formatDateLabel(DateTime date) => '${_weekdayAbbrev[date.weekday - 1]} ${date.day}';

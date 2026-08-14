@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/presentation/auth_controller.dart';
 import 'access_token_holder.dart';
 import 'api_config.dart';
 import 'session_refresher.dart';
@@ -16,11 +17,17 @@ class AuthInterceptor extends Interceptor {
     required this.readAccessToken,
     required this.onRefresh,
     required this.dio,
+    this.onSessionExpired,
   });
 
   final String? Function() readAccessToken;
   final RefreshTokenCallback onRefresh;
   final Dio dio;
+
+  /// Called once when a mid-use refresh fails — i.e. the session is over,
+  /// not just this one request. Optional so every existing test construction
+  /// of this interceptor keeps compiling unchanged.
+  final void Function()? onSessionExpired;
 
   Future<String?>? _inFlightRefresh;
 
@@ -45,8 +52,18 @@ class AuthInterceptor extends Interceptor {
       _inFlightRefresh = null;
     });
 
-    final newToken = await _inFlightRefresh;
+    String? newToken;
+    try {
+      newToken = await _inFlightRefresh;
+    } on SessionRestoreUnavailableException {
+      // Couldn't reach the backend to refresh — this request's own offline
+      // error is the right thing to surface, not "your session is over."
+      handler.next(err);
+      return;
+    }
+
     if (newToken == null) {
+      onSessionExpired?.call();
       handler.next(err);
       return;
     }
@@ -76,6 +93,7 @@ final dioProvider = Provider<Dio>((ref) {
       dio: dio,
       readAccessToken: () => ref.read(accessTokenHolderProvider),
       onRefresh: () => refreshAccessToken(ref),
+      onSessionExpired: () => ref.read(authControllerProvider.notifier).sessionExpired(),
     ),
   );
 
