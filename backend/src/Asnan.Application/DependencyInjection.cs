@@ -7,6 +7,7 @@ using Asnan.Application.Doctors;
 using Asnan.Application.Notifications;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
+using Asnan.Application.Profile;
 using Asnan.Application.Reminders;
 using Asnan.Application.Specialties;
 using FluentValidation;
@@ -55,6 +56,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationDeviceService, NotificationDeviceService>();
         services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
         services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+
+        services.Configure<PhotoStorageOptions>(configuration.GetSection(PhotoStorageOptions.SectionName));
+        services.AddScoped<IPatientProfileService, PatientProfileService>();
 
         return services;
     }

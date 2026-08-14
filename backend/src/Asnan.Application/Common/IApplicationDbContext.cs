@@ -62,6 +62,8 @@ public interface IApplicationDbContext
 
     DbSet<Notification> Notifications { get; }
 
+    DbSet<PatientProfile> PatientProfiles { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Needed to recover a tracked entity's state after a

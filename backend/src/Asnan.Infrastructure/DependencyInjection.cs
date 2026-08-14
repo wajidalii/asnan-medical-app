@@ -4,6 +4,7 @@ using Asnan.Application.Common;
 using Asnan.Application.Notifications;
 using Asnan.Application.Otps;
 using Asnan.Application.Payments;
+using Asnan.Application.Profile;
 using Asnan.Application.Reminders;
 using Asnan.Infrastructure.Auth;
 using Asnan.Infrastructure.Chat;
@@ -11,6 +12,7 @@ using Asnan.Infrastructure.Notifications;
 using Asnan.Infrastructure.Otps;
 using Asnan.Infrastructure.Payments;
 using Asnan.Infrastructure.Persistence;
+using Asnan.Infrastructure.Profile;
 using Asnan.Infrastructure.Reminders;
 using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
@@ -49,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IOfflineMessageNotifier, NotificationOfflineMessageNotifier>();
 
         AddNotificationSender(services, configuration);
+
+        services.AddScoped<IPatientPhotoService, LocalPatientPhotoService>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
