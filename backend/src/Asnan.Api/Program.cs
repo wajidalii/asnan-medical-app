@@ -1,5 +1,6 @@
 using System.Text;
 using Asnan.Api.BackgroundServices;
+using Asnan.Api.Hubs;
 using Asnan.Api.Middleware;
 using Asnan.Application;
 using Asnan.Infrastructure;
@@ -84,9 +85,27 @@ try
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["SigningKey"]!)),
                 ClockSkew = TimeSpan.FromSeconds(30),
             };
+
+            // SignalR clients can't set the Authorization header on the WebSocket
+            // upgrade handshake — the access token travels as a query param instead
+            // (ARCHITECTURE.md §9), read here only for requests to the hub itself.
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs/chat"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                },
+            };
         });
 
     builder.Services.AddAuthorization();
+    builder.Services.AddSignalR();
 
     // Native Android/iOS HTTP clients aren't subject to CORS at all — this
     // exists for the Flutter *web* target (used for local dev/testing here)
@@ -149,6 +168,7 @@ try
     app.UseRateLimiter();
 
     app.MapControllers();
+    app.MapHub<ChatHub>("/hubs/chat");
 
     // Liveness: process is up, no dependency checks.
     app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
