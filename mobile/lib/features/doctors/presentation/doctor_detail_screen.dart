@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/design_tokens.dart';
 import '../domain/doctor_detail.dart';
 import '../domain/doctors_failure.dart';
 import 'doctor_detail_controller.dart';
@@ -17,7 +18,7 @@ class DoctorDetailScreen extends ConsumerWidget {
     final asyncDoctor = ref.watch(doctorDetailProvider(doctorId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Doctor Profile')),
+      appBar: AppBar(title: const Text('Doctor profile')),
       body: asyncDoctor.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) {
@@ -30,7 +31,7 @@ class DoctorDetailScreen extends ConsumerWidget {
                 children: [
                   Text(message, textAlign: TextAlign.center),
                   const SizedBox(height: 12),
-                  FilledButton(
+                  OutlinedButton(
                     onPressed: () => ref.invalidate(doctorDetailProvider(doctorId)),
                     child: const Text('Retry'),
                   ),
@@ -52,62 +53,87 @@ class _DoctorDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final divider = theme.colorScheme.outlineVariant;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       children: [
-        Row(
-          children: [
-            const CircleAvatar(radius: 36, child: Icon(Icons.person, size: 36)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(border: Border.all(color: divider)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(doctor.fullName, style: textTheme.titleLarge),
-                  if (doctor.qualifications != null && doctor.qualifications!.isNotEmpty)
-                    Text(doctor.qualifications!, style: textTheme.bodyMedium),
-                  if (!doctor.isAcceptingNewPatients)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Not accepting new patients',
-                        style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
-                      ),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(border: Border.all(color: divider), color: theme.colorScheme.surfaceContainerHighest),
+                    child: Icon(Icons.person_outline, size: 32, color: textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(doctor.fullName, style: textTheme.titleLarge),
+                        if (doctor.qualifications != null && doctor.qualifications!.isNotEmpty)
+                          Text(
+                            doctor.qualifications!,
+                            style: textTheme.bodySmall?.copyWith(color: textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                          ),
+                        if (!doctor.isAcceptingNewPatients)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Not accepting new patients',
+                              style: textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (doctor.specialties.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final s in doctor.specialties) Chip(label: Text(s.name))],
+              if (doctor.specialties.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [for (final s in doctor.specialties) _SpecialtyTag(label: s.name, isDark: isDark)],
+                ),
+              ],
+              if (doctor.bio != null && doctor.bio!.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(doctor.bio!, style: textTheme.bodySmall?.copyWith(height: 1.6, color: textTheme.bodySmall!.color!.withValues(alpha: 0.85))),
+              ],
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: divider))),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text('Consultation fee', style: textTheme.labelMedium),
+                    Text('${doctor.currency} ${doctor.consultationFee.toStringAsFixed(2)}', style: textTheme.headlineSmall),
+                  ],
+                ),
+              ),
+            ],
           ),
-        const SizedBox(height: 16),
-        if (doctor.bio != null && doctor.bio!.isNotEmpty) ...[
-          Text('About', style: textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(doctor.bio!),
-          const SizedBox(height: 16),
-        ],
-        _DetailRow(icon: Icons.school, label: 'Experience', value: _experienceLabel(doctor.yearsOfExperience)),
-        _DetailRow(
-          icon: Icons.payments,
-          label: 'Consultation fee',
-          value: '${doctor.currency} ${doctor.consultationFee.toStringAsFixed(0)}',
         ),
-        _DetailRow(
-          icon: Icons.timer,
-          label: 'Appointment duration',
-          value: '${doctor.appointmentDurationMinutes} minutes',
-        ),
+        const SizedBox(height: 20),
+        _DetailRow(icon: Icons.school_outlined, label: 'Experience', value: _experienceLabel(doctor.yearsOfExperience)),
+        _DetailRow(icon: Icons.timer_outlined, label: 'Appointment duration', value: '${doctor.appointmentDurationMinutes} minutes'),
         if (doctor.clinicAddress != null && doctor.clinicAddress!.isNotEmpty)
-          _DetailRow(icon: Icons.location_on, label: 'Clinic', value: doctor.clinicAddress!),
+          _DetailRow(icon: Icons.location_on_outlined, label: 'Clinic', value: doctor.clinicAddress!),
         const SizedBox(height: 24),
         FilledButton(
           onPressed: doctor.isAcceptingNewPatients
@@ -122,6 +148,25 @@ class _DoctorDetailBody extends StatelessWidget {
   String _experienceLabel(int? years) {
     if (years == null) return 'Not specified';
     return years == 1 ? '1 year' : '$years years';
+  }
+}
+
+class _SpecialtyTag extends StatelessWidget {
+  const _SpecialtyTag({required this.label, required this.isDark});
+
+  final String label;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(color: isDark ? AppColors.accent900 : AppColors.accent100),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: isDark ? AppColors.accent300 : AppColors.accentTextOnTint),
+      ),
+    );
   }
 }
 

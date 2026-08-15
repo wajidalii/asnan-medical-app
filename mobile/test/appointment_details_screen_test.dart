@@ -151,7 +151,7 @@ void main() {
 
     expect(find.textContaining("You'll receive a refund of USD 120.00"), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Cancel appointment'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel appointment'));
     await tester.pumpAndSettle();
 
     expect(find.text('Appointment cancelled.'), findsOneWidget);
@@ -173,7 +173,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('This appointment is too close to its scheduled time to cancel.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Cancel appointment'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Cancel appointment'), findsNothing);
 
     await tester.tap(find.text('Keep appointment'));
     await tester.pumpAndSettle();

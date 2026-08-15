@@ -159,7 +159,7 @@ void main() {
     expect(find.text("You'll receive a refund of USD 120.00 (100% of the consultation fee)."), findsOneWidget);
 
     // Confirm -> cancel API call -> success snackbar.
-    await tester.tap(find.widgetWithText(FilledButton, 'Cancel appointment'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel appointment'));
     await tester.pumpAndSettle();
 
     expect(find.text('Appointment cancelled.'), findsOneWidget);

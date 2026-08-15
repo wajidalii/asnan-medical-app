@@ -211,7 +211,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Text(state.loadFailure!.message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              FilledButton(onPressed: () => ref.read(profileControllerProvider.notifier).retry(), child: const Text('Retry')),
+              OutlinedButton(onPressed: () => ref.read(profileControllerProvider.notifier).retry(), child: const Text('Retry')),
             ],
           ),
         ),

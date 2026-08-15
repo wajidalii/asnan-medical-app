@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/design_tokens.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../domain/session_summary.dart';
 import '../domain/sessions_result.dart';
@@ -99,13 +100,10 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Devices & Sessions'),
+        title: const Text("Where you're signed in"),
         actions: [
           if (state.sessions.isNotEmpty)
-            TextButton(
-              onPressed: _logOutAllDevices,
-              child: Text('Log out all', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
-            ),
+            TextButton(onPressed: _logOutAllDevices, child: const Text('Log out all')),
         ],
       ),
       body: _buildBody(context, state),
@@ -126,7 +124,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
             children: [
               Text(state.failure!.message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              FilledButton(onPressed: () => ref.read(sessionsControllerProvider.notifier).retry(), child: const Text('Retry')),
+              OutlinedButton(onPressed: () => ref.read(sessionsControllerProvider.notifier).retry(), child: const Text('Retry')),
             ],
           ),
         ),
@@ -137,26 +135,46 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
       return const Center(child: Text('No active sessions.'));
     }
 
-    return ListView.separated(
-      itemCount: state.sessions.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final session = state.sessions[index];
-        final isCurrent = state.currentDeviceId != null && session.deviceId == state.currentDeviceId;
-        final isRevoking = state.revokingSessionId == session.id;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final divider = theme.colorScheme.outlineVariant;
 
-        return ListTile(
-          leading: const Icon(Icons.devices),
-          title: Text(session.deviceName ?? 'Unknown device'),
-          subtitle: Text('Last seen ${_formatLastSeen(session.lastSeenAtUtc)}${isCurrent ? ' · This device' : ''}'),
-          trailing: isRevoking
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : TextButton(
-                  onPressed: isCurrent ? _logOutCurrentDevice : () => _logOutOtherDevice(session),
-                  child: const Text('Log out'),
-                ),
-        );
-      },
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(
+            "These are the devices currently signed in to your account. If you don't recognize one, log it out.",
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+          ),
+        ),
+        for (final session in state.sessions) ...[
+          () {
+            final isCurrent = state.currentDeviceId != null && session.deviceId == state.currentDeviceId;
+            final isRevoking = state.revokingSessionId == session.id;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: isCurrent ? (isDark ? AppColors.accent900 : AppColors.accent100) : null,
+                border: Border.all(color: isCurrent ? AppColors.accent : divider),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.devices, color: isCurrent ? (isDark ? AppColors.accent300 : AppColors.accent700) : theme.colorScheme.outline),
+                title: Text(session.deviceName ?? 'Unknown device'),
+                subtitle: Text('Last seen ${_formatLastSeen(session.lastSeenAtUtc)}${isCurrent ? ' · This device' : ''}'),
+                trailing: isRevoking
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : TextButton(
+                        onPressed: isCurrent ? _logOutCurrentDevice : () => _logOutOtherDevice(session),
+                        child: const Text('Log out'),
+                      ),
+              ),
+            );
+          }(),
+        ],
+      ],
     );
   }
 }

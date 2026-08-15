@@ -99,7 +99,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Confirming your appointment...'), findsOneWidget);
-    expect(find.text('Appointment Confirmed'), findsNothing);
+    expect(find.text('Appointment confirmed'), findsNothing);
   });
 
   testWidgets('a poll timeout offers a manual recheck', (tester) async {
@@ -115,7 +115,7 @@ void main() {
     await tester.pumpWidget(_wrap(paymentState: PaymentState(checkout: _checkoutWithStatus(AppointmentPaymentStatus.scheduled))));
     await tester.pumpAndSettle();
 
-    expect(find.text('Appointment Confirmed'), findsOneWidget);
+    expect(find.text('Appointment confirmed'), findsOneWidget);
 
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();

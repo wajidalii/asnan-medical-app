@@ -103,7 +103,7 @@ void main() {
     await tester.pumpWidget(_wrap(adapter));
     await tester.pumpAndSettle();
 
-    expect(find.text('No doctors match your search.'), findsOneWidget);
+    expect(find.text('No doctors match your filters'), findsOneWidget);
   });
 
   testWidgets('shows an error state with a retry button on failure', (tester) async {
@@ -126,7 +126,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
 
   testWidgets('retry re-issues the search request', (tester) async {
@@ -154,7 +154,7 @@ void main() {
     await tester.pumpWidget(_wrap(adapter));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
     await tester.pumpAndSettle();
 
     expect(find.text('Dr. Retry Success'), findsOneWidget);

@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
 
   testWidgets('logging out another device calls the revoke endpoint and removes its row', (tester) async {

@@ -95,14 +95,14 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text("Couldn't verify your session. Check your connection."), findsOneWidget);
+    expect(find.text("We couldn't verify your session. Check your connection and try again."), findsOneWidget);
     expect(find.text('Sign in'), findsNothing);
     expect(attempts, 1);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
     await tester.pumpAndSettle();
 
-    expect(find.text("Couldn't verify your session. Check your connection."), findsOneWidget);
+    expect(find.text("We couldn't verify your session. Check your connection and try again."), findsOneWidget);
     expect(attempts, 2);
   });
 }

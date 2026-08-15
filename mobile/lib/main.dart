@@ -110,6 +110,8 @@ class _AsnanAppState extends ConsumerState<AsnanApp> {
     return MaterialApp.router(
       title: 'Asnan',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       routerConfig: router,
       scaffoldMessengerKey: _scaffoldMessengerKey,
     );

@@ -94,7 +94,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Slot held'), findsOneWidget);
+    expect(find.text('SLOT RESERVED'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Cancel hold'), findsOneWidget);
 
     // Cancel explicitly so the countdown timer is torn down before the test
@@ -126,7 +126,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Someone else just booked this slot.'), findsOneWidget);
-    expect(find.text('Slot held'), findsNothing);
+    expect(find.text('SLOT RESERVED'), findsNothing);
   });
 
   testWidgets('hold expiry returns to slot selection with a clear message', (tester) async {
@@ -154,14 +154,14 @@ void main() {
     // detects the already-past expiresAtUtc and cancels itself.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Slot held'), findsOneWidget);
+    expect(find.text('SLOT RESERVED'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));
     // The expiry path re-fetches slots (a real async call) — safe to settle
     // now since _tick() already cancelled the periodic timer.
     await tester.pumpAndSettle();
 
-    expect(find.text('Slot held'), findsNothing);
+    expect(find.text('SLOT RESERVED'), findsNothing);
     expect(find.text('Your hold has expired. Please pick another slot.'), findsOneWidget);
   });
 
@@ -195,7 +195,7 @@ void main() {
     expect(find.byType(OutlinedButton), findsNothing);
 
     shouldFail = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
     await tester.pumpAndSettle();
 
     expect(find.text('Network error. Please check your connection and try again.'), findsNothing);
@@ -210,7 +210,7 @@ void main() {
     await tester.pumpWidget(_wrap(adapter));
     await tester.pumpAndSettle();
 
-    expect(find.text('No available slots for this date.'), findsOneWidget);
+    expect(find.text('No slots available this day'), findsOneWidget);
   });
 
   testWidgets('selecting a different date that fails to load shows an error banner with a retry that reloads it', (tester) async {
@@ -239,24 +239,23 @@ void main() {
       return _json(_availabilityWithOneSlot());
     });
 
+    final day1Date = DateTime(today.year, today.month, today.day + 1);
+
     await tester.pumpWidget(_wrap(adapter));
     await tester.pumpAndSettle();
-    expect(find.text(_formatDateLabel(DateTime(today.year, today.month, today.day + 1))), findsOneWidget);
+    expect(find.byKey(dateCellKey(day1Date)), findsOneWidget);
 
-    await tester.tap(find.text(_formatDateLabel(DateTime(today.year, today.month, today.day + 1))));
+    await tester.tap(find.byKey(dateCellKey(day1Date)));
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong. Please try again.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
 
     day1ShouldFail = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong. Please try again.'), findsNothing);
     expect(find.byType(OutlinedButton), findsWidgets);
   });
 }
-
-const _weekdayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-String _formatDateLabel(DateTime date) => '${_weekdayAbbrev[date.weekday - 1]} ${date.day}';

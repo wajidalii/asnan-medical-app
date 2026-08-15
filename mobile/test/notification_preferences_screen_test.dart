@@ -178,6 +178,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
 }
