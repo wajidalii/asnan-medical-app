@@ -4,9 +4,26 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../calendar/calendar_event_data.dart';
+import '../../calendar/calendar_service.dart';
+import '../../calendar/calendar_write_result.dart';
+import '../../doctors/presentation/doctor_detail_controller.dart';
 import '../domain/appointment_payment_status.dart';
 import 'payment_controller.dart';
 import 'payment_state.dart';
+
+String _formatDateTime(DateTime utc) {
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  final local = utc.toLocal();
+  final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final minute = local.minute.toString().padLeft(2, '0');
+  final period = local.hour < 12 ? 'AM' : 'PM';
+  return '${weekdays[local.weekday - 1]}, ${months[local.month - 1]} ${local.day} at $hour12:$minute $period';
+}
 
 const _terminalFailureStatuses = {
   AppointmentPaymentStatus.paymentFailed,
@@ -44,7 +61,7 @@ class PaymentConfirmationScreen extends ConsumerWidget {
           child: checkout == null
               ? const Text('No checkout in progress.', textAlign: TextAlign.center)
               : switch (checkout.status) {
-                  AppointmentPaymentStatus.scheduled => const _Success(),
+                  AppointmentPaymentStatus.scheduled => _Success(doctorId: doctorId),
                   final status when _terminalFailureStatuses.contains(status) => _Failure(
                       message: 'Your payment could not be completed.',
                       onRetry: () => _restartBooking(context, ref),
@@ -143,24 +160,76 @@ class _MockProviderHandoff extends StatelessWidget {
   }
 }
 
-class _Success extends StatelessWidget {
-  const _Success();
+class _Success extends ConsumerWidget {
+  const _Success({required this.doctorId});
+
+  final String doctorId;
+
+  Future<void> _addToCalendar(BuildContext context, WidgetRef ref, String doctorName, DateTime startUtc, DateTime endUtc) async {
+    final result = await ref.read(calendarServiceProvider).addEvent(CalendarEventData(
+          title: 'Appointment with $doctorName',
+          startUtc: startUtc,
+          endUtc: endUtc,
+          description: 'Asnan appointment with $doctorName.',
+        ));
+
+    if (!context.mounted) return;
+
+    final message = switch (result.status) {
+      CalendarWriteStatus.success => 'Added to your calendar.',
+      CalendarWriteStatus.permissionDenied => 'Calendar permission was not granted.',
+      CalendarWriteStatus.noWritableCalendar => 'No writable calendar was found on this device.',
+      CalendarWriteStatus.failure => 'Could not add to your calendar. Please try again.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final hold = ref.watch(bookingControllerProvider(doctorId)).activeHold;
+    final asyncDoctor = ref.watch(doctorDetailProvider(doctorId));
+    final doctorName = asyncDoctor.maybeWhen(data: (doctor) => doctor.fullName, orElse: () => null);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.check_circle, size: 64, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 16),
-        Text('Appointment Confirmed', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        const Text('Your payment was successful and the appointment is scheduled.', textAlign: TextAlign.center),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () => context.goNamed(AppRoutes.home),
-          child: const Text('Done'),
+        Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(border: Border.all(color: theme.colorScheme.outline)),
+          child: Icon(Icons.check, size: 28, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
         ),
+        const SizedBox(height: 20),
+        Text('Appointment confirmed', style: theme.textTheme.headlineMedium),
+        const SizedBox(height: 8),
+        Text(
+          doctorName != null && hold != null
+              ? "You're booked with $doctorName on ${_formatDateTime(hold.slotStartUtc)}."
+              : 'Your payment was successful and the appointment is scheduled.',
+          style: theme.textTheme.bodySmall?.copyWith(height: 1.6, color: theme.textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 26),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => context.goNamed(AppRoutes.home),
+            child: const Text('Done'),
+          ),
+        ),
+        if (doctorName != null && hold != null) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _addToCalendar(context, ref, doctorName, hold.slotStartUtc, hold.slotEndUtc),
+              icon: const Icon(Icons.calendar_month, size: 16),
+              label: const Text('Add to calendar'),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -174,14 +243,27 @@ class _Failure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
-        const SizedBox(height: 16),
-        Text(message, textAlign: TextAlign.center),
-        const SizedBox(height: 24),
-        FilledButton(onPressed: onRetry, child: const Text('Try Again')),
+        Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(border: Border.all(color: theme.colorScheme.error)),
+          child: Icon(Icons.close, size: 28, color: theme.colorScheme.error),
+        ),
+        const SizedBox(height: 20),
+        Text('Payment failed', style: theme.textTheme.headlineMedium),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          style: theme.textTheme.bodySmall?.copyWith(height: 1.6, color: theme.textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 26),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onRetry, child: const Text('Try Again'))),
       ],
     );
   }

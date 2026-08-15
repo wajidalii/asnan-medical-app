@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/error_banner.dart';
+import '../../../core/widgets/section_divider.dart';
+import '../../../core/widgets/status_pill.dart';
 import '../../calendar/calendar_event_data.dart';
 import '../../calendar/calendar_service.dart';
 import '../../calendar/calendar_write_result.dart';
@@ -19,20 +22,6 @@ String _formatDateTime(DateTime utc) {
   final period = local.hour < 12 ? 'AM' : 'PM';
   return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} · $hour12:$minute $period';
 }
-
-String _statusLabel(AppointmentPaymentStatus status) => switch (status) {
-      AppointmentPaymentStatus.paymentPending => 'Payment pending',
-      AppointmentPaymentStatus.scheduled => 'Scheduled',
-      AppointmentPaymentStatus.completed => 'Completed',
-      AppointmentPaymentStatus.noShow => 'No-show',
-      AppointmentPaymentStatus.cancelledByPatient => 'Cancelled by you',
-      AppointmentPaymentStatus.cancelledByDoctor => 'Cancelled by doctor',
-      AppointmentPaymentStatus.cancelledByAdmin => 'Cancelled',
-      AppointmentPaymentStatus.refundPending => 'Refund pending',
-      AppointmentPaymentStatus.refunded => 'Refunded',
-      AppointmentPaymentStatus.paymentFailed => 'Payment failed',
-      AppointmentPaymentStatus.expired => 'Expired',
-    };
 
 const _cancellableStatuses = {AppointmentPaymentStatus.scheduled};
 
@@ -85,16 +74,20 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel appointment?'),
+        title: const Text('Cancel this appointment?'),
         content: Text(
           preview.isAllowed
               ? "You'll receive a refund of ${preview.currency} ${preview.refundAmount.toStringAsFixed(2)} (${preview.refundPercentage}% of the consultation fee)."
               : 'This appointment is too close to its scheduled time to cancel.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Keep appointment')),
+          ElevatedButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Keep appointment')),
           if (preview.isAllowed)
-            FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Cancel appointment')),
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: OutlinedButton.styleFrom(foregroundColor: Theme.of(dialogContext).colorScheme.error, side: BorderSide(color: Theme.of(dialogContext).colorScheme.error)),
+              child: const Text('Cancel appointment'),
+            ),
         ],
       ),
     );
@@ -131,9 +124,11 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
         padding: const EdgeInsets.all(16),
         children: [
           Text(appointment.doctorFullName, style: textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(_statusLabel(appointment.status), style: textTheme.bodyMedium),
-          const Divider(height: 32),
+          const SizedBox(height: 8),
+          StatusPill.forStatus(appointment.status),
+          const SizedBox(height: 20),
+          const SectionDivider(),
+          const SizedBox(height: 20),
           _DetailRow(icon: Icons.event, label: _formatDateTime(appointment.slotStartUtc)),
           asyncDoctor.when(
             loading: () => const SizedBox.shrink(),
@@ -145,11 +140,11 @@ class _AppointmentDetailsScreenState extends ConsumerState<AppointmentDetailsScr
           _DetailRow(icon: Icons.payments, label: '${appointment.currency} ${appointment.consultationFee.toStringAsFixed(2)}'),
           if (state.previewFailure != null) ...[
             const SizedBox(height: 16),
-            _ErrorBanner(message: state.previewFailure!.message),
+            ErrorBanner(message: state.previewFailure!.message),
           ],
           if (state.cancelFailure != null) ...[
             const SizedBox(height: 16),
-            _ErrorBanner(message: state.cancelFailure!.message),
+            ErrorBanner(message: state.cancelFailure!.message),
           ],
           const SizedBox(height: 24),
           if (canAddToCalendarOrChat) ...[
@@ -205,25 +200,6 @@ class _DetailRow extends StatelessWidget {
           Expanded(child: Text(label)),
         ],
       ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(message, style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer)),
     );
   }
 }

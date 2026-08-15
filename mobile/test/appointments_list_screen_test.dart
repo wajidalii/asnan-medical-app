@@ -92,7 +92,7 @@ void main() {
     await tester.pumpWidget(_wrap(adapter));
     await tester.pumpAndSettle();
 
-    expect(find.text('No upcoming appointments. Book one from the doctor directory.'), findsOneWidget);
+    expect(find.text('No appointments yet'), findsOneWidget);
   });
 
   testWidgets('shows an error state with a retry button on failure', (tester) async {
@@ -104,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Network error. Please check your connection and try again.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
 
   testWidgets('switching to the Past tab loads that scope independently', (tester) async {

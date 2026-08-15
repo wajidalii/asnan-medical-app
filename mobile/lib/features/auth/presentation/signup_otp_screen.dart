@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/error_banner.dart';
 import 'signup_controller.dart';
 
 class SignupOtpScreen extends ConsumerStatefulWidget {
@@ -47,20 +48,13 @@ class _SignupOtpScreenState extends ConsumerState<SignupOtpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('We sent a code to ${state.destination ?? 'your account'}.'),
-                const SizedBox(height: 16),
+                Text(
+                  'We sent a code to ${state.destination ?? 'your account'}.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                ),
+                const SizedBox(height: 20),
                 if (state.failure != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      state.failure!.message,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
-                    ),
-                  ),
+                  ErrorBanner(message: state.failure!.message),
                   const SizedBox(height: 16),
                 ],
                 TextFormField(

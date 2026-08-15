@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/design_tokens.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../chat/presentation/unread_badge_provider.dart';
 import '../domain/doctor_sort_by.dart';
@@ -102,7 +103,6 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
                           controller.setSearchText('');
                         },
                       ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onSubmitted: controller.setSearchText,
             ),
@@ -118,8 +118,13 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
                 itemBuilder: (context, index) {
                   final specialty = state.specialties[index];
                   final selected = state.selectedSpecialtyIds.contains(specialty.id);
+                  final theme = Theme.of(context);
+                  final isDark = theme.brightness == Brightness.dark;
                   return FilterChip(
                     label: Text(specialty.name),
+                    labelStyle: selected
+                        ? theme.chipTheme.labelStyle?.copyWith(color: isDark ? AppColors.accent300 : AppColors.accentTextOnTint)
+                        : null,
                     selected: selected,
                     onSelected: (_) => controller.toggleSpecialty(specialty.id),
                   );
@@ -161,15 +166,22 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
     }
 
     if (state.failure != null && state.doctors.isEmpty) {
+      final textTheme = Theme.of(context).textTheme;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(state.failure!.message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: controller.retry, child: const Text('Retry')),
+              Text('Couldn’t load doctors', style: textTheme.titleMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 6),
+              Text(
+                state.failure!.message,
+                style: textTheme.bodySmall?.copyWith(color: textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(onPressed: controller.retry, child: const Text('Retry')),
             ],
           ),
         ),
@@ -177,13 +189,21 @@ class _DoctorListScreenState extends ConsumerState<DoctorListScreen> {
     }
 
     if (state.isEmpty) {
+      final textTheme = Theme.of(context).textTheme;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            'No doctors match your search.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('No doctors match your filters', style: textTheme.titleMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 6),
+              Text(
+                'Try a different search term or clear a filter.',
+                style: textTheme.bodySmall?.copyWith(color: textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       );

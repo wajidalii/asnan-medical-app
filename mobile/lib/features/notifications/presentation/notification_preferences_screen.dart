@@ -55,7 +55,7 @@ class _NotificationPreferencesScreenState extends ConsumerState<NotificationPref
             children: [
               Text(state.failure!.message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              FilledButton(onPressed: controller.retry, child: const Text('Retry')),
+              OutlinedButton(onPressed: controller.retry, child: const Text('Retry')),
             ],
           ),
         ),

@@ -8,6 +8,11 @@ import '../domain/outbox_message.dart';
 import 'chat_controller.dart';
 import 'chat_state.dart';
 
+const _reconnectAmberLight = Color(0xFFB8863C);
+const _reconnectAmberDark = Color(0xFFD1A35E);
+const _reconnectBgLight = Color(0xFFF6ECD9);
+const _reconnectBgDark = Color(0xFF3A2F1C);
+
 String _formatTime(DateTime utc) {
   final local = utc.toLocal();
   final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
@@ -78,6 +83,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final state = ref.watch(chatControllerProvider(widget.conversationId));
     final controller = ref.read(chatControllerProvider(widget.conversationId).notifier);
     final myUserId = ref.watch(currentUserIdProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     ref.listen(chatControllerProvider(widget.conversationId), (previous, next) {
       final grew = next.messages.length > (previous?.messages.length ?? 0);
@@ -97,15 +103,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (state.connectionStatus != ChatConnectionStatus.connected)
             Container(
               width: double.infinity,
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                _connectionLabel(state.connectionStatus),
-                style: TextStyle(color: Theme.of(context).colorScheme.onSecondaryContainer),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? _reconnectBgDark : _reconnectBgLight,
+                border: Border(bottom: BorderSide(color: isDark ? _reconnectAmberDark : _reconnectAmberLight)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.sync, size: 13, color: isDark ? _reconnectAmberDark : _reconnectAmberLight),
+                  const SizedBox(width: 7),
+                  Text(
+                    _connectionLabel(state.connectionStatus),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: isDark ? _reconnectAmberDark : _reconnectAmberLight),
+                  ),
+                ],
               ),
             ),
           Expanded(child: _MessageList(state: state, myUserId: myUserId, scrollController: _scrollController, controller: controller)),
-          _Composer(controller: _inputController, onSend: _send),
+          _Composer(controller: _inputController, onSend: _send, connected: state.connectionStatus == ChatConnectionStatus.connected),
         ],
       ),
     );
@@ -135,7 +151,7 @@ class _MessageList extends StatelessWidget {
             children: [
               Text(state.historyFailure!.message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              FilledButton(onPressed: controller.retryLoadHistory, child: const Text('Retry')),
+              OutlinedButton(onPressed: controller.retryLoadHistory, child: const Text('Retry')),
             ],
           ),
         ),
@@ -143,7 +159,24 @@ class _MessageList extends StatelessWidget {
     }
 
     if (state.messages.isEmpty && state.outbox.isEmpty) {
-      return const Center(child: Text('No messages yet. Say hello!'));
+      final theme = Theme.of(context);
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 44),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.chat_bubble_outline, size: 28, color: theme.colorScheme.outline),
+              const SizedBox(height: 12),
+              Text(
+                'No messages yet. Say hello!',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final lastMineIndex = state.messages.lastIndexWhere((m) => m.senderUserId == myUserId);
@@ -174,29 +207,33 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final divider = theme.colorScheme.outlineVariant;
+    final captionColor = theme.textTheme.bodySmall?.color?.withValues(alpha: 0.4);
+
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isMine ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message.content),
-            const SizedBox(height: 2),
-            Text(
-              showReadReceipt ? '${_formatTime(message.sentAtUtc)} · Read' : _formatTime(message.sentAtUtc),
-              style: Theme.of(context).textTheme.bodySmall,
+      child: Column(
+        crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            decoration: BoxDecoration(
+              color: isMine ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+              border: isMine ? null : Border.all(color: divider),
             ),
-          ],
-        ),
+            child: Text(message.content, style: theme.textTheme.bodySmall?.copyWith(color: isMine ? theme.colorScheme.onPrimary : null)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              showReadReceipt ? '${_formatTime(message.sentAtUtc)} · Read' : _formatTime(message.sentAtUtc),
+              style: theme.textTheme.labelSmall?.copyWith(color: captionColor),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -209,23 +246,25 @@ class _OutboxBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
+      child: Opacity(
+        opacity: 0.5,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(item.content),
-            const SizedBox(height: 2),
-            Text('Sending…', style: Theme.of(context).textTheme.bodySmall),
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              decoration: BoxDecoration(color: theme.colorScheme.primary),
+              child: Text(item.content, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimary)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('Sending…', style: theme.textTheme.labelSmall?.copyWith(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.4))),
+            ),
           ],
         ),
       ),
@@ -234,28 +273,45 @@ class _OutboxBubble extends StatelessWidget {
 }
 
 class _Composer extends StatelessWidget {
-  const _Composer({required this.controller, required this.onSend});
+  const _Composer({required this.controller, required this.onSend, required this.connected});
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final bool connected;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant))),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: TextField(
                 controller: controller,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => onSend(),
-                decoration: const InputDecoration(hintText: 'Type a message', border: OutlineInputBorder()),
+                decoration: const InputDecoration(hintText: 'Type a message'),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton.filled(icon: const Icon(Icons.send), onPressed: onSend),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: connected ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.4),
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: const RoundedRectangleBorder(),
+                  padding: EdgeInsets.zero,
+                ),
+                icon: const Icon(Icons.send, size: 16),
+                onPressed: onSend,
+              ),
+            ),
           ],
         ),
       ),

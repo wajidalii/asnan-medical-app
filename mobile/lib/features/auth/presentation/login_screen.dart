@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/error_banner.dart';
 import 'auth_controller.dart';
 import 'login_controller.dart';
 
@@ -45,27 +46,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign in')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text('Welcome back', style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 6),
+                Text(
+                  'Log in to manage your appointments.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.6)),
+                ),
+                const SizedBox(height: 28),
                 if (state.failure != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      state.failure!.message,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
-                    ),
-                  ),
+                  ErrorBanner(message: state.failure!.message),
                   const SizedBox(height: 16),
                 ],
                 TextFormField(

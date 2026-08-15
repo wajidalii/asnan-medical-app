@@ -214,29 +214,29 @@ void main() {
     // Home -> doctor detail.
     await tester.tap(find.text('Dr. Flow Test'));
     await tester.pumpAndSettle();
-    expect(find.text('Doctor Profile'), findsOneWidget);
+    expect(find.text('Doctor profile'), findsOneWidget);
 
     // Doctor detail -> booking.
     await tester.tap(find.widgetWithText(FilledButton, 'Book Appointment'));
     await tester.pumpAndSettle();
-    expect(find.text('Book Appointment'), findsWidgets);
+    expect(find.text('Choose a time'), findsOneWidget);
 
     // Select the only slot -> hold created.
     await tester.tap(find.byType(OutlinedButton).first);
     // Not pumpAndSettle: the hold's countdown timer never settles on its own.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Slot held'), findsOneWidget);
+    expect(find.text('SLOT RESERVED'), findsOneWidget);
 
     // Booking -> payment review. Not pumpAndSettle from here on: the hold's
     // BookingController instance stays alive underneath (push, not go — see
     // PaymentReviewScreen's own doc comment), so its 1s countdown
     // Timer.periodic keeps ticking in the background and would make
     // pumpAndSettle spin forever.
-    await tester.tap(find.widgetWithText(FilledButton, 'Proceed to Payment'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue to payment'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('Review & Pay'), findsOneWidget);
+    expect(find.text('Review & pay'), findsOneWidget);
 
     // Start checkout -> payment confirmation (mock-provider handoff).
     await tester.tap(find.widgetWithText(FilledButton, 'Pay USD 120'));
@@ -254,6 +254,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
 
-    expect(find.text('Appointment Confirmed'), findsOneWidget);
+    expect(find.text('Appointment confirmed'), findsOneWidget);
   });
 }

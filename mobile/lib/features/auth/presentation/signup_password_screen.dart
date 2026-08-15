@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/error_banner.dart';
 import 'signup_controller.dart';
 
 class SignupPasswordScreen extends ConsumerStatefulWidget {
@@ -51,20 +52,10 @@ class _SignupPasswordScreenState extends ConsumerState<SignupPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (state.failure != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      state.failure!.message,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
-                    ),
-                    // Server-side field-level errors (e.g. "too common") — the
-                    // client only checks length locally; the strength meter
-                    // itself is a design-system concern layered on later.
-                  ),
+                  // Server-side field-level errors (e.g. "too common") — the
+                  // client only checks length locally; the strength meter
+                  // itself is a design-system concern layered on later.
+                  ErrorBanner(message: state.failure!.message),
                   if (state.failure!.fieldErrors?['Password'] case final errors?)
                     ...errors.map((e) => Padding(
                           padding: const EdgeInsets.only(top: 8),
